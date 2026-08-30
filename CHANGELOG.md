@@ -26,21 +26,73 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 - **Added**
   - Bootstrapped the dedicated package repository from the schema baseline.
   - Added the gpu.model.conversion.enabled rollout reference and package smoke test.
-
-- **Added**
-  - (placeholder)
+  - Added strict, bounded GLB v2 validation, deterministic GLB export, exact
+    source/output SHA-256 evidence, embedded-image verification, and a
+    fail-closed `@plasius/gpu-model-runtime` registration seam.
+  - Added golden and hostile fixtures for malformed containers, URI admission,
+    MIME/magic mismatch, accessor bounds and finite values, unsupported static
+    world features, resource ceilings, and deterministic output.
+  - Added Task `gpu-model-gltf#5`'s bounded ChatGPT demonstration import: a
+    verified `GpuModelDocument`, compiler-safe static projection, exact source
+    hashes, canonical basis/winding conversion, fixed material factors, and
+    runtime-adapter loading behind `asset.pipeline.pvox-models.enabled` and
+    `asset.pipeline.converter.gltf.enabled`.
 
 - **Changed**
-  - (placeholder)
+  - Aligned GitHub CI, release preparation, immutable package sealing, npm OIDC
+    publication, privacy checks, and first-publication safeguards with the
+    released `@plasius/schema` v1.4.2 package template.
+  - Replaced the bootstrap-only validation surface with the first strict GLB
+    slice while retaining bootstrap exports for compatibility. Canonical
+    runtime loading is now enabled only for the narrower static demo profile;
+    broad canonical ingestion remains outside this task.
+  - Raised all local coverage gates to 80% and made dependency-tree auditing
+    fail closed.
 
 - **Fixed**
-  - (placeholder)
+  - Prevented the read-only checkout credential from overriding the narrowly
+    scoped release-prep GitHub App token during approved CD branch creation.
+  - Retried protected release-metadata merges while required checks complete,
+    allowing approved CD to proceed when repository auto-merge is disabled.
+  - Added trusted same-repository pull-request validation and moved all CI jobs
+    to GitHub-hosted Linux so protected release checks cannot wait on an
+    unavailable self-hosted runner.
+  - Rejected corrupt, oversized, and indexed PNGs and bounded chunk fan-out, decoded image
+    dimensions, pixels, runtime texture bytes, zlib output, and scanline filters before
+    evidence is emitted; JPEG now fails closed pending a reviewed full decoder.
+  - Prevented wide JSON documents from escaping as raw `RangeError`s and
+    replaced width-sized traversal stacks with depth-bounded incremental
+    validation.
+  - Reduced peak GLB working memory with direct one-pass output construction,
+    sequential zero-copy hashing of private snapshots, early source release,
+    and measured fixed, whole-input, and JSON-specific working-set gates.
+  - Preserved bounded validator findings ahead of synthetic export diagnostics.
+  - Narrowed package metadata to the strict GLB validation/export slice actually
+    implemented by this release.
+  - Kept broad strict admission attributable to predecessor Task
+    `gpu-model-gltf#1` / Feature `plasius-ltd-site#1148`; Task #5 adds only the
+    bounded Story `plasius-ltd-site#2094` compiler hand-off.
+  - Rejected non-space GLB JSON padding and enforced caller JSON ceilings on
+    aligned deterministic output so the same profile remains idempotent.
+  - Included the real `tests/` directory in TypeScript validation.
 
 - **Security**
   - Pinned patched transitive npm dependencies to clear the current audit baseline.
   - Added fail-closed source and npm-package admission for the administrative contributor registry and pinned the CI/CD runtime to Node.js 24.18.0 LTS.
   - Pinned audited transitive build dependencies to fixed `brace-expansion`, `esbuild`, and `postcss` releases.
-  - (placeholder)
+  - Pinned the Apache-2.0 Khronos glTF Validator and reject external/data URIs,
+    unsafe JSON keys, corrupt/unrecognized image bytes, non-finite geometry,
+    resource overruns, and unsupported constructs before evidence is emitted.
+  - Rejects disabled flags, source-hash disagreement, unused scene payloads,
+    mixed accessor roles, implicit winding, unsupported surface inputs, and
+    attempts to raise the 16 MiB/200,000-triangle demo ceilings.
+  - Bounded canonical work with cached accessor decoders, per-mesh primitive
+    plans, early instanced-triangle rejection, complete index coverage, a fixed
+    processing deadline, captured native Blob reads, and the shared
+    1,048,576-metre absolute coordinate ceiling.
+  - Rejects rig and morph fan-out from shallow metadata before semantic graph
+    expansion, and trips primitive-instance and computed-coordinate ceilings
+    before nested canonical enumeration.
 
 ## [1.2.17] - 2026-06-28
 
