@@ -33,11 +33,6 @@ on:
         description: "Internal fail-closed release tag for the publish phase"
         required: false
         type: string
-      bootstrap_first_publish:
-        description: "Internal one-time first-publication credential gate; remove after trusted publishing is bound"
-        required: false
-        type: boolean
-        default: false
 
 permissions:
   contents: read
@@ -129,7 +124,6 @@ jobs:
           EXPECTED_SHA: ${{ needs.prepare_release.outputs.commit_sha }}
           RELEASE_TAG: ${{ needs.prepare_release.outputs.tag }}
           PREID: ${{ needs.prepare_release.outputs.effective_preid }}
-          BOOTSTRAP_FIRST_PUBLISH: ${{ inputs.bootstrap_first_publish }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -145,7 +139,6 @@ jobs:
             --arg sha "${EXPECTED_SHA}" \
             --arg tag "${RELEASE_TAG}" \
             --arg preid "${PREID}" \
-            --arg bootstrap_first_publish "${BOOTSTRAP_FIRST_PUBLISH}" \
             '{
               "ref": "main",
               "inputs": {
@@ -153,15 +146,14 @@ jobs:
                 "bump": "none",
                 "preid": $preid,
                 "expected_commit_sha": $sha,
-                "release_tag": $tag,
-                "bootstrap_first_publish": $bootstrap_first_publish
+                "release_tag": $tag
               }
             }' |
             gh api -X POST \
               "repos/${GITHUB_REPOSITORY}/actions/workflows/cd.yml/dispatches" \
               --input -
 
-          echo "Queued publication of ${RELEASE_TAG} from ${EXPECTED_SHA} with the explicitly selected credential policy."
+          echo "Queued tokenless publication of ${RELEASE_TAG} from ${EXPECTED_SHA}."
 
   validate_and_pack:
     if: inputs.phase == 'publish'
@@ -194,6 +186,9 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           package-manager-cache: false
+
+      - name: Install pinned npm release client
+        run: npm install --global npm@11.6.2 --ignore-scripts --registry https://registry.npmjs.org
 
       - name: Verify release runtime
         run: |
@@ -474,6 +469,9 @@ jobs:
           node-version-file: ".nvmrc"
           package-manager-cache: false
 
+      - name: Install pinned npm release client
+        run: npm install --global npm@11.6.2 --ignore-scripts --registry https://registry.npmjs.org
+
       - name: Verify release runtime
         run: |
           set -euo pipefail
@@ -739,6 +737,12 @@ jobs:
         run: |
           set -euo pipefail
 
+          HEAD_SHA="$(git rev-parse HEAD)"
+          if [ "${HEAD_SHA}" != "${EXPECTED_SHA}" ]; then
+            echo "Checked-out release commit ${HEAD_SHA} differs from ${EXPECTED_SHA}." >&2
+            exit 1
+          fi
+
           git fetch origin main --no-tags
           REMOTE_MAIN="$(git rev-parse refs/remotes/origin/main)"
           if [ "${REMOTE_MAIN}" != "${EXPECTED_SHA}" ]; then
@@ -851,74 +855,28 @@ jobs:
         with:
           subject-path: ${{ steps.release.outputs.sbom_path }}
 
-      - name: Enforce one-time first-publication boundary
-        if: steps.release.outputs.should_publish_npm == 'true' && inputs.bootstrap_first_publish == true
+      - name: Revalidate exact main immediately before npm publication
+        if: steps.release.outputs.should_publish_npm == 'true'
         env:
-          PACKAGE_NAME: ${{ steps.release.outputs.package_name }}
-          PACKAGE_VERSION: ${{ steps.release.outputs.release_version }}
+          EXPECTED_SHA: ${{ inputs.expected_commit_sha }}
         run: |
           set -euo pipefail
 
-          if [ "${PACKAGE_VERSION}" != "0.1.0" ]; then
-            echo "First-publication bootstrap is restricted to version 0.1.0." >&2
+          HEAD_SHA="$(git rev-parse HEAD)"
+          if [ "${HEAD_SHA}" != "${EXPECTED_SHA}" ]; then
+            echo "Checked-out release commit ${HEAD_SHA} differs from ${EXPECTED_SHA}." >&2
             exit 1
           fi
 
-          PACKAGE_LOOKUP="${RUNNER_TEMP}/npm-bootstrap-package-lookup-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.log"
-          cleanup() {
-            if [ -f "${PACKAGE_LOOKUP}" ]; then
-              : > "${PACKAGE_LOOKUP}"
-              rm -f "${PACKAGE_LOOKUP}"
-            fi
-          }
-          trap cleanup EXIT
-
-          if npm view "${PACKAGE_NAME}" name \
-            --registry https://registry.npmjs.org \
-            --prefer-online \
-            --loglevel=error \
-            >"${PACKAGE_LOOKUP}" 2>&1; then
-            echo "${PACKAGE_NAME} already exists; the one-time bootstrap credential is forbidden." >&2
+          git fetch origin main --no-tags
+          REMOTE_MAIN="$(git rev-parse refs/remotes/origin/main)"
+          if [ "${REMOTE_MAIN}" != "${EXPECTED_SHA}" ]; then
+            echo "main moved to ${REMOTE_MAIN}; refusing npm publication for ${EXPECTED_SHA}." >&2
             exit 1
           fi
-          if ! grep -Eq '(^|[[:space:]])E404([[:space:]]|$)|404 Not Found' "${PACKAGE_LOOKUP}"; then
-            echo "Unable to prove that the package is absent from npm; refusing the one-time bootstrap credential." >&2
-            exit 1
-          fi
-
-      - name: Publish first package with the one-time bootstrap credential
-        if: steps.release.outputs.should_publish_npm == 'true' && inputs.bootstrap_first_publish == true
-        env:
-          DIST_TAG: ${{ steps.release.outputs.dist_tag }}
-          NPM_BOOTSTRAP_CREDENTIAL: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
-          TARBALL: ${{ steps.release.outputs.tarball_path }}
-        run: |
-          set -euo pipefail
-
-          if [ -z "${NPM_BOOTSTRAP_CREDENTIAL}" ]; then
-            echo "The production environment does not contain the time-limited bootstrap credential." >&2
-            exit 1
-          fi
-
-          USERCONFIG="${RUNNER_TEMP}/npm-bootstrap-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.npmrc"
-          cleanup() {
-            if [ -f "${USERCONFIG}" ]; then
-              : > "${USERCONFIG}"
-              rm -f "${USERCONFIG}"
-            fi
-          }
-          trap cleanup EXIT
-          umask 077
-          printf '%s\n' \
-            '@plasius:registry=https://registry.npmjs.org' \
-            '//registry.npmjs.org/:_authToken=${NPM_BOOTSTRAP_CREDENTIAL}' \
-            > "${USERCONFIG}"
-
-          PUBLISH_ARGS=(--access public --provenance --registry https://registry.npmjs.org --tag "${DIST_TAG}")
-          npm publish "./${TARBALL}" --ignore-scripts --userconfig "${USERCONFIG}" "${PUBLISH_ARGS[@]}"
 
       - name: Publish package through npm OIDC
-        if: steps.release.outputs.should_publish_npm == 'true' && inputs.bootstrap_first_publish != true
+        if: steps.release.outputs.should_publish_npm == 'true'
         env:
           DIST_TAG: ${{ steps.release.outputs.dist_tag }}
           TARBALL: ${{ steps.release.outputs.tarball_path }}

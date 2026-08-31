@@ -186,7 +186,7 @@ artifacts using normalized path checks and sealed-tar revalidation. The
 GitHub-hosted Node.js 24.18.0 release path follows the released
 `@plasius/schema` v1.4.2 template: release metadata lands through a protected
 pull request, exact-main CI must pass, and the immutable tarball is published
-through npm OIDC. Version `0.1.0` may use the explicit, time-limited
-`bootstrap_first_publish` production gate only while the package is absent;
-that credential is removed after the npm trusted publisher binding is active.
+through npm OIDC with a pinned npm 11.6.2 client. The completed `0.1.0`
+bootstrap credential path has been removed; all subsequent releases require
+trusted publishing.
 <!-- END PLASIUS RELEASE INTEGRITY -->

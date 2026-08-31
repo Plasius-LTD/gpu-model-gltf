@@ -16,9 +16,13 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
+  - Removed the completed first-publication bootstrap and disabled package-manager
+    cache finalization in both exact-commit CI jobs.
   - (placeholder)
 
 - **Security**
+  - Removed the temporary npm credential path; releases now require exact-main
+    trusted publishing with a pinned npm 11.6.2 client and a final head recheck.
   - (placeholder)
 
 ## [0.1.1] - 2026-08-30

@@ -30,22 +30,24 @@ describe("release preparation workflow", () => {
   });
 
   it("runs trusted pull-request and exact-main validation on hosted runners", () => {
+    expect(ciWorkflow).toContain("workflow_dispatch:");
     expect(ciWorkflow).toContain("pull_request:");
     expect(ciWorkflow).toContain("name: Trusted head admission");
     expect(ciWorkflow.match(/^ {4}runs-on: ubuntu-latest$/gmu)).toHaveLength(3);
     expect(ciWorkflow).not.toContain("self-hosted");
+    expect(ciWorkflow).not.toMatch(/\n\s+cache:\s*["']?npm["']?/u);
+    expect(ciWorkflow.match(/package-manager-cache: false/gu)).toHaveLength(2);
   });
 
-  it("preserves the Schema release contract with a bounded bootstrap extension", () => {
+  it("preserves the Schema release contract without a write-token fallback", () => {
     expect(cdWorkflow).toContain("Wait for successful exact-SHA main CI");
     expect(cdWorkflow).toContain(
       "node scripts/verify-public-package.cjs --inventory-stdin",
     );
     expect(cdWorkflow).toContain('npm publish "./${TARBALL}"');
-    expect(cdWorkflow).toContain("bootstrap_first_publish:");
-    expect(cdWorkflow).toContain(
-      'if: steps.release.outputs.should_publish_npm == \'true\' && inputs.bootstrap_first_publish != true',
-    );
+    expect(cdWorkflow.match(/npm@11\.6\.2/gu)).toHaveLength(2);
+    expect(cdWorkflow).toContain("Revalidate exact main immediately before npm publication");
+    expect(cdWorkflow).not.toMatch(/bootstrap_first_publish|NPM_BOOTSTRAP_TOKEN|NPM_TOKEN|NODE_AUTH_TOKEN/u);
   });
 
   it("runs Schema privacy and sealed-package checks in CI", () => {
