@@ -1,6 +1,6 @@
 {
   "name": "@plasius/gpu-model-gltf",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Strict self-contained GLB validation, deterministic export, and bounded canonical static import.",
   "type": "module",
   "sideEffects": false,
