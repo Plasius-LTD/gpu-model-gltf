@@ -149,6 +149,8 @@ jobs:
             exit 1
           fi
 
+          npm --prefix "${PACKAGE_DIRECTORY}" run privacy:check
+
           NAME=$(PACKAGE_JSON_PATH="${PACKAGE_JSON}" node -p "const path = require('node:path'); const pkg = require(path.resolve(process.env.PACKAGE_JSON_PATH)); pkg.name || ''")
           CURRENT_VER=$(PACKAGE_JSON_PATH="${PACKAGE_JSON}" node -p "const path = require('node:path'); const pkg = require(path.resolve(process.env.PACKAGE_JSON_PATH)); pkg.version || ''")
           PRIVATE_PACKAGE=$(PACKAGE_JSON_PATH="${PACKAGE_JSON}" node -p "const path = require('node:path'); const pkg = require(path.resolve(process.env.PACKAGE_JSON_PATH)); String(Boolean(pkg.private))")
@@ -409,7 +411,7 @@ jobs:
             if gh pr merge "${PR_NUMBER}" --squash --delete-branch; then
               echo "Release metadata PR #${PR_NUMBER} merged."
             else
-              echo "Immediate merge was not available for release metadata PR #${PR_NUMBER}; enabling auto-merge and waiting."
+              echo "Immediate merge was not available for release metadata PR #${PR_NUMBER}; waiting for required checks and retrying the protected merge."
               gh pr merge "${PR_NUMBER}" --auto --squash --delete-branch || true
 
               DEADLINE=$((SECONDS + MERGE_TIMEOUT_SECONDS))
@@ -422,6 +424,10 @@ jobs:
                 if [ "${STATE}" = "CLOSED" ]; then
                   echo "Release metadata PR #${PR_NUMBER} closed without merging." >&2
                   exit 1
+                fi
+                if gh pr merge "${PR_NUMBER}" --squash --delete-branch >/dev/null 2>&1; then
+                  echo "Release metadata PR #${PR_NUMBER} merged after required checks completed."
+                  break
                 fi
                 sleep 10
               done

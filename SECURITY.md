@@ -15,3 +15,29 @@ We aim to acknowledge your report within 2 business days and to provide a more d
 ## Disclosure Policy
 
 We request that you give us the opportunity to address the vulnerability before publicly disclosing it. We will coordinate with you on public disclosure once a fix is available and deployed.
+
+## GLB trust boundary
+
+Model bytes, JSON, names, extras, and validator findings are untrusted input.
+The adapter therefore:
+
+- copies and bounds input before asynchronous validation;
+- parses only GLB v2 and never resolves a URI or invokes a network/resource
+  resolver;
+- rejects prototype-pollution keys, non-finite accessor values, invalid buffer
+  ranges, source-type mismatches, and image MIME/magic disagreements;
+- accepts only extension-free, self-contained static-world content in the
+  current release;
+- emits stable, bounded diagnostics without raw URI or provider text; and
+- hashes the exact source and deterministic final output with Web Crypto
+  SHA-256.
+
+The adapter is an application-level admission layer, not an archive or malware
+scanner. Provider archives must remain in the credential-free quarantine and
+sandbox pipeline before GLB bytes reach this package. Rights and licensing
+gates remain independent and cannot be overridden by successful GLB validation.
+
+Runtime rollback uses the remotely controlled `gpu.model.conversion.enabled`
+feature flag and a pinned last-known-good package release. Tolerant and forensic
+repair modes remain disabled until their repair/evidence contracts are
+implemented and separately reviewed.

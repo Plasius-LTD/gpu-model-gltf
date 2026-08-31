@@ -1,4 +1,4 @@
-# Contributing to @plasius/schema
+# Contributing to @plasius/gpu-model-gltf
 
 First off: thanks for taking the time to contribute!
 This document explains how to work on the project, how to propose changes, and what we expect in pull requests.
@@ -31,14 +31,17 @@ This project is open source (see `LICENSE`). To protect contributors and users, 
 
 ## What this project does
 
-`@plasius/schema` provides a small, strongly-typed schema library:
+`@plasius/gpu-model-gltf` provides a strict format boundary for glTF/GLB model
+processing:
 
-- A fluent field builder (e.g. `field().string().required()`),
-- Built-in validators for common standards (ISO/RFC/OWASP, etc.),
-- PII annotations + redaction utilities,
-- Type inference for safe, consistent entities across projects.
+- bounded GLB v2 container and glTF 2.0 validation;
+- deterministic final GLB export and exact content hashes;
+- structured conversion diagnostics shared with the asset pipeline;
+- lazy loading through the GPU model runtime adapter contract.
 
-Contributions typically fall into: new validators, field builder features, type improvements, docs, and tooling quality.
+Contributions typically cover format conformance, hostile fixtures, bounded
+resource handling, diagnostics, browser/runtime compatibility, docs, and tooling
+quality. Keep canonical scene ownership out of this package.
 
 ---
 
@@ -109,11 +112,11 @@ We label approachable tasks as **good first issue** and **help wanted**.
 
 **Commit messages** (Conventional Commits)
 
-- `feat: add ISO-3166 alpha-3 validator`
-- `fix: correct RFC5322 email regex edge-case`
-- `docs: expand PII redaction examples`
-- `refactor: simplify field builder pipeline`
-- `test: add cases for currency code`
+- `feat: validate embedded PNG buffer views`
+- `fix: reject non-finite interleaved accessors`
+- `docs: document GLB resource ceilings`
+- `refactor: isolate deterministic chunk serialization`
+- `test: add malformed GLB chunk fixtures`
 - `chore: bump dev deps`
 
 **Pull Requests**
@@ -144,11 +147,13 @@ We label approachable tasks as **good first issue** and **help wanted**.
 - **Performance:** Avoid excessive allocations in hot paths; prefer immutable patterns but mind GC pressure.
 - **Docs:** Add TSDoc comments for exported types/functions.
 
-### Validators
+### Format validation
 
-- Add tests covering common/edge cases.
-- Cite the source/standard (e.g., ISO/RFC) in comments.
-- Keep regexes readable (use `x`/comments where possible) and benchmark if complex.
+- Add golden and hostile tests for each accepted or rejected construct.
+- Cite the Khronos glTF 2.0 specification or official validator behavior where
+  format rules are not self-evident.
+- Preserve the no-network boundary and explicit source/output hash evidence.
+- Fail closed when a construct cannot be validated without fidelity loss.
 
 ### PII handling
 

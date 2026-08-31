@@ -1,7 +1,7 @@
 {
   "name": "@plasius/gpu-model-gltf",
-  "version": "0.1.0",
-  "description": "glTF and GLB GPU model import, export, validation, and repair diagnostics.",
+  "version": "0.1.1",
+  "description": "Strict self-contained GLB validation, deterministic export, and bounded canonical static import.",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
@@ -22,20 +22,27 @@
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:privacy": "node --test tests/public-package-policy.test.cjs",
     "typecheck": "tsc --noEmit",
     "audit:eslint": "eslint . --max-warnings=0",
-    "audit:deps": "npm ls --all --omit=optional --omit=peer > /dev/null 2>&1 || true",
+    "audit:deps": "npm ls --all --omit=optional --omit=peer",
     "audit:npm": "npm audit --audit-level=high --omit=dev",
     "audit:test": "vitest run --coverage",
+    "audit:all": "npm run typecheck && npm run audit:eslint && npm run audit:deps && npm run audit:npm && npm run audit:test",
     "lint": "eslint . --max-warnings=0",
     "prepare": "npm run build",
     "clean": "rimraf dist",
     "test:coverage": "vitest run --coverage",
-    "pack:check": "node scripts/verify-public-package.cjs",
+    "pack:check": "npm run privacy:check && node scripts/verify-public-package.cjs",
+    "privacy:check": "node scripts/verify-public-artifacts.cjs --source-only",
     "prepublishOnly": "npm run build && npm run pack:check"
   },
   "keywords": [
-    "schema",
+    "gltf",
+    "glb",
+    "3d-model",
+    "gpu-model",
+    "asset-pipeline",
     "validation",
     "data-validation",
     "schema-validation",
@@ -46,7 +53,7 @@
     "runtime-validation",
     "type-safety",
     "plasius",
-    "schema-helper",
+    "khronos",
     "entity-schema",
     "domain-modeling",
     "agnostic",
@@ -94,12 +101,19 @@
     }
   ],
   "overrides": {
-    "brace-expansion": "5.0.8",
+    "nanoid": "3.3.18",
+    "brace-expansion": "5.0.9",
     "esbuild": "0.28.1",
     "minimatch": "^10.2.1",
-    "postcss": "8.5.23"
+    "postcss": "8.5.26"
   },
   "engines": {
     "node": ">=24"
+  },
+  "dependencies": {
+    "@plasius/asset-contracts": "^0.4.0",
+    "@plasius/gpu-model-core": "^0.1.0",
+    "@plasius/gpu-model-runtime": "^0.2.0",
+    "gltf-validator": "2.0.0-dev.3.10"
   }
 }
