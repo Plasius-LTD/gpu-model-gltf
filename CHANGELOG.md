@@ -9,6 +9,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ## [Unreleased]
 
+- **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [0.1.5] - 2026-10-11
+
 - Refresh npm dependency lockfile to current supported stable versions (weekly maintenance, 2026-10-11). Refresh published Plasius package baselines after upstream releases.
 
 - **Added**
@@ -490,7 +504,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/gpu-model-gltf/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/gpu-model-gltf/compare/v0.1.5...HEAD
 [1.0.0]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.0
 [1.0.13]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.13
 [1.0.17]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.17
@@ -530,3 +544,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [0.1.2]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.1.2
 [0.1.3]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.1.3
 [0.1.4]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.1.4
+[0.1.5]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.1.5
