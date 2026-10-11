@@ -111,9 +111,9 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@plasius/asset-contracts": "^0.4.3",
-    "@plasius/gpu-model-core": "^0.4.4",
-    "@plasius/gpu-model-runtime": "^0.2.2",
+    "@plasius/asset-contracts": "^0.4.4",
+    "@plasius/gpu-model-core": "^0.4.5",
+    "@plasius/gpu-model-runtime": "^0.2.3",
     "gltf-validator": "2.0.0-dev.3.10"
   }
 }
