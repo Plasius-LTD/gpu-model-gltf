@@ -855,3 +855,30 @@ it("rejects tag-spoofed non-byte views while accepting genuine cross-realm byte 
       .meshes,
   ).toHaveLength(1);
 });
+
+it.each(["expanded-accessors", "instanced-world"])(
+  "rejects %s work before any resource acquisition or validator work",
+  async (kind) => {
+    const f = withoutTexture();
+    const limits =
+      kind === "expanded-accessors"
+        ? { maxGeometryElements: 20 }
+        : { maxWorldVertices: 5 };
+    if (kind === "expanded-accessors")
+      f.json.meshes[0].primitives.push(
+        structuredClone(f.json.meshes[0].primitives[0]),
+      );
+    else {
+      f.json.nodes.push({ mesh: 0 });
+      f.json.scenes[0].nodes.push(1);
+    }
+    const o = options(f);
+    await expect(
+      importGltfToGpuModelDocument(encoder.encode(JSON.stringify(f.json)), {
+        ...o,
+        limits,
+      }),
+    ).rejects.toSatisfy(code("document-resource-limit"));
+    expect(o.resourceResolver.resolve).not.toHaveBeenCalled();
+  },
+);

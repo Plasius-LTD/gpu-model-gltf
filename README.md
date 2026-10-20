@@ -57,7 +57,8 @@ JSON retains the 64-level / 1-million-value format limits; the broad profile
 allows a string up to the entry point byte limit so embedded showcase buffers
 remain usable. The original strict profile retains its 1 MiB string ceiling. Geometry is repacked as little-endian f32
 attributes/u32 indices; that expansion is included in the canonical byte and
-component limits. Original bufferView ranges and BIN padding are checked before
+component limits. Repeated primitive/accessor references and mesh-instance work
+are preflighted before resource I/O and Khronos traversal. Original bufferView ranges and BIN padding are checked before
 merging, and a conservative 768 MiB working-set estimate bounds assembly.
 PNG uses the existing full bounded decoder; JPEG lazily loads pinned `jpeg-js`
 0.4.4 with strict decoding, pixel ceilings and a 128 MiB decoder memory ceiling.

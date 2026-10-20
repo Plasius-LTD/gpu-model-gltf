@@ -391,6 +391,76 @@ export interface ResolvedImport {
   readonly sourceContentHash: string;
   readonly validator: Awaited<ReturnType<typeof format.validateWithKhronos>>;
 }
+/** Bound repeated accessor/mesh references before acquisition or Khronos traversal. */
+function preflightGeometryWork(
+  document: JsonRecord,
+  budget: ImportBudget,
+): void {
+  const accessors = array(document.accessors);
+  const sizes: Record<string, number> = {
+    SCALAR: 1,
+    VEC2: 2,
+    VEC3: 3,
+    VEC4: 4,
+  };
+  let expandedElements = 0;
+  const count = (index: unknown) =>
+    record(accessors[integer(index, 0, accessors.length - 1)]);
+  const consume = (amount: number) => {
+    if (amount > budget.limits.maxGeometryElements - expandedElements)
+      fail(
+        "document-resource-limit",
+        "Repeated geometry references exceed the pre-validation work budget.",
+      );
+    expandedElements += amount;
+    if (expandedElements > Math.floor(budget.limits.maxAggregateBytes / 4))
+      fail(
+        "document-resource-limit",
+        "Expanded canonical geometry exceeds its byte budget.",
+      );
+  };
+  const verticesByMesh = array(document.meshes).map((value) => {
+    let vertices = 0;
+    for (const primitiveValue of array(record(value).primitives)) {
+      budget.check();
+      const primitive = record(primitiveValue);
+      const attributes = record(primitive.attributes);
+      const positionCount = integer(count(attributes.POSITION).count, 1);
+      for (const index of Object.values(attributes)) {
+        const accessor = count(index);
+        const components = sizes[String(accessor.type)];
+        if (!components)
+          fail(
+            "unsupported-gltf-feature",
+            "Static geometry requires scalar or vector accessors.",
+          );
+        consume(integer(accessor.count, 1) * components);
+      }
+      consume(
+        primitive.indices === undefined
+          ? positionCount
+          : integer(count(primitive.indices).count, 1),
+      );
+      vertices += positionCount;
+    }
+    return vertices;
+  });
+  let worldVertices = 0;
+  for (const value of array(document.nodes)) {
+    budget.check();
+    const node = record(value);
+    if (node.mesh === undefined) continue;
+    const vertices =
+      verticesByMesh[integer(node.mesh, 0, verticesByMesh.length - 1)]!;
+    if (vertices > budget.limits.maxWorldVertices - worldVertices)
+      fail(
+        "document-resource-limit",
+        "Mesh instances exceed the pre-validation world-vertex budget.",
+      );
+    worldVertices += vertices;
+  }
+}
+
 /** @internal Normalize only after checking original references and byte ranges. */
 export async function resolveImport(
   input: Uint8Array,
@@ -451,6 +521,7 @@ export async function resolveImport(
   }
   format.validateJsonGraph(document, limits, budget.signal);
   format.validateClosedFeatureSet(document, limits, budget.signal);
+  preflightGeometryWork(document, budget);
   for (const key of [
     "accessors",
     "animations",

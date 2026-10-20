@@ -16,7 +16,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
-  - (placeholder)
+  - Reject repeated accessor expansion and instanced world-vertex work before external resource acquisition or Khronos validation can multiply processing cost.
 
 - **Security**
   - (placeholder)
