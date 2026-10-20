@@ -10,6 +10,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [0.2.0] - 2026-10-20
+
+- **Added**
   - Explicit bounded glTF JSON/GLB resource import with runtime-resolved external buffers, data URIs, embedded/relative PNG and JPEG resources, verified canonical static geometry, core texture slots and showcase fixture coverage.
 
 - **Changed**
@@ -520,7 +534,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/gpu-model-gltf/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/gpu-model-gltf/compare/v0.2.0...HEAD
 [1.0.0]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.0
 [1.0.13]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.13
 [1.0.17]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.17
@@ -562,3 +576,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [0.1.4]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.1.4
 [0.1.5]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.1.5
 [0.1.6]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.1.6
+[0.2.0]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.2.0
