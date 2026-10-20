@@ -1,6 +1,6 @@
 {
   "name": "@plasius/gpu-model-gltf",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Bounded glTF JSON/GLB resource import, strict self-contained validation, and canonical static geometry.",
   "type": "module",
   "sideEffects": false,
