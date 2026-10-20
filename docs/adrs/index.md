@@ -7,3 +7,4 @@
 - [ADR-0005: Strict Self-Contained GLB Admission](./adr-0005-strict-self-contained-glb-admission.md)
 - [ADR-0006: Bounded GLB to Canonical Demo Import](./adr-0006-bounded-glb-to-canonical-demo-import.md)
 - [ADR-0007: Hosted OIDC Package Publication](./adr-0007-hosted-oidc-package-publication.md)
+- [ADR-0008: Bounded JSON/GLB Resource Import](./adr-0008-bounded-json-glb-resource-import.md)

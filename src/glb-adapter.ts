@@ -1351,3 +1351,10 @@ export const glbAdapter: ModelAdapter<GpuModelDocument, GpuModelStaticDemoCompil
   sniff: sniffGlb,
   load: loadFromRuntime,
 });
+
+/** @internal Shared format admission; deliberately absent from the public barrel. */
+export const gltfFormatInternals = Object.freeze({
+  assertNoDuplicateJsonKeys, validateJsonGraph, resolveLimits, parseGlb,
+  validateClosedFeatureSet, validateBuffers, validateAccessors,
+  exportGlb, validateWithKhronos, sha256, imageKind, validatePng, validateImageDimensions,
+});
