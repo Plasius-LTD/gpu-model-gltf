@@ -10,10 +10,10 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Explicit bounded glTF JSON/GLB resource import with runtime-resolved external buffers, data URIs, embedded/relative PNG and JPEG resources, verified canonical static geometry, core texture slots and showcase fixture coverage.
 
 - **Changed**
-  - (placeholder)
+  - Consume published runtime ^0.3.0 for corrected acquisition integrity and cross-realm bytes; lazily load exact jpeg-js 0.4.4 for bounded full JPEG decoding. Existing strict/demo APIs retain their profiles.
 
 - **Fixed**
   - (placeholder)

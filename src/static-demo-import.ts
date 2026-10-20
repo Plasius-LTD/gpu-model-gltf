@@ -1074,3 +1074,6 @@ export async function importGlbToGpuModelDocument(
     ...compiled,
   });
 }
+
+/** @internal Shared basis math; the demo profile and public API stay closed. */
+export const staticGeometryInternals = Object.freeze({ matrixFromNode, multiplyMatrices, transformPosition, conjugateBasis });

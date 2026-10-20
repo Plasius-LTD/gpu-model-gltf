@@ -1,10 +1,95 @@
 # @plasius/gpu-model-gltf
 
 Strict, browser-safe admission, deterministic export, and bounded canonical
-import for self-contained glTF 2.0 binary (`.glb`) assets. This repository is
+import for self-contained glTF 2.0 binary (`.glb`) assets, plus an explicit
+bounded JSON/GLB resource-import profile. This repository is
 the dedicated format boundary defined by site ADR 0094; runtime discovery stays
 in `@plasius/gpu-model-runtime`, while `@plasius/gpu-model-core` owns and
 privately verifies the canonical scene document returned by the demo importer.
+
+## Bounded JSON/GLB resource import
+
+`importGltfToGpuModelDocument(bytes, options)` selects `gltf-static-resources-v1`.
+It admits glTF 2.0 JSON and GLB, multiple external or base64 data-URI buffers,
+embedded or relative PNG/JPEG images, dense static triangle geometry, and core
+metallic-roughness materials and texture slots. External resources pass through
+the released `@plasius/gpu-model-runtime` resolver; this package owns reference
+admission, buffer layout, image validation and canonical mapping. The default
+`glbAdapter` and the strict/static demo APIs retain their narrower profiles below.
+
+```ts
+import { PackageResourceResolver, sha256Hex } from "@plasius/gpu-model-runtime";
+import { importGltfToGpuModelDocument } from "@plasius/gpu-model-gltf";
+
+const resourceResolver = new PackageResourceResolver({
+  sourceKind: "uint8-array",
+  package: { resources: { "mesh.bin": { bytes: meshBytes } } },
+  fetch: globalThis.fetch.bind(globalThis),
+  hashBytes: sha256Hex,
+  sleep: async () => {}, // memory-only package; no retry sleep is used
+  fetchPolicy: { maxAttempts: 1, timeoutMs: 30_000, maxBytes: 64 * 1024 * 1024 },
+});
+const result = await importGltfToGpuModelDocument(gltfBytes, {
+  // Evaluate gpu.model.conversion.enabled in the responsible remote flag client.
+  conversionEnabled: remotelyEvaluatedConversionDecision,
+  resourceResolver,
+  signal,
+});
+// result.document contains privately verified immutable canonical resources.
+```
+
+For URL acquisition, supply the runtime resolver's trusted `baseUrl` and normal
+fetch policy. A resolver is unnecessary for fully embedded/data-URI inputs.
+Only package-relative references are admitted: no parent traversal, absolute
+URLs, authorities, file schemes, query/fragment tokens, backslashes, controls,
+encoded separators or double encoding. Relative URI paths decode once before
+runtime resolution. Data URIs require a declared buffer/PNG/JPEG MIME type and
+strict padded base64. The trusted resolver controls its base URL, credentials,
+redirect policy and any deployment-specific network allowlist. Provider paths,
+errors and URIs never appear in importer diagnostics.
+
+Limits only tighten `DEFAULT_GLTF_RESOURCE_IMPORT_LIMITS`: 16 MiB entry point,
+64 MiB per resource and aggregate acquired/assembled/canonical bytes, 1,024
+buffer/image declarations, 64 MiB per/aggregate decoded image bytes, 4,096-pixel
+image dimensions, 4 million decoded geometry components (including generated
+indices), 1 million instanced world vertices, 4,095 source nodes and 30 seconds.
+JSON retains the 64-level / 1-million-value format limits; the broad profile
+allows a string up to the entry point byte limit so embedded showcase buffers
+remain usable. The original strict profile retains its 1 MiB string ceiling. Geometry is repacked as little-endian f32
+attributes/u32 indices; that expansion is included in the canonical byte and
+component limits. Original bufferView ranges and BIN padding are checked before
+merging, and a conservative 768 MiB working-set estimate bounds assembly.
+PNG uses the existing full bounded decoder; JPEG lazily loads pinned `jpeg-js`
+0.4.4 with strict decoding, pixel ceilings and a 128 MiB decoder memory ceiling.
+
+The importer reflects the source +Z-forward basis, reverses triangle winding,
+conjugates node transforms and adds a floor-centred normalization root. It
+preserves vertex semantics, normalized/interleaved values, core material slots,
+image bytes and samplers. A texture used in different color spaces receives
+separate canonical texture nodes sharing one verified image resource. Authored
+node/mesh/material names and bounded extras remain content in the returned
+model (`metadata.sourceExtras` / material `sourceMetadata.sourceExtras`), never
+logging or diagnostics. Source URI/provider strings are not copied into it.
+
+This profile rejects extensions, skins, morphs, animation, sparse accessors,
+non-triangle topology, cameras, multiple scenes and orphan nodes explicitly.
+Indexed/interlaced PNG remains unsupported. Those broader fidelity/repair paths
+belong to Tasks #14–#17. A strict final Khronos validation and canonical-core
+verification must both succeed; unknown failures return bounded reason codes.
+Cancellation/deadlines race uncooperative asynchronous providers and propagate
+an abort signal. Synchronous parsing, JPEG decoding and canonical validation
+cannot be preempted mid-call; bounded inputs/work and deadline checkpoints limit
+them. Run large imports in a consumer-owned worker to keep UI responsive.
+
+The additive function performs no caching and does not register a broad runtime
+adapter. The runtime's existing entry-point cache does not identify external
+resource revisions; migration must define resource identity/invalidation before
+using that cache. Disabling `gpu.model.conversion.enabled` fails before resource
+I/O. Rollback: disable that remote flag at discovery/consumer boundary, retain the
+existing loader, and return to the prior package version. Never route a rejected
+broad asset into the narrower demo path as a permissive fallback. See
+[showcase mapping and NFR evidence](docs/tdrs/tdr-0003-bounded-resource-import.md)
+and [ADR-0008](docs/adrs/adr-0008-bounded-json-glb-resource-import.md).
 
 ## Supported strict validation slice
 
@@ -25,10 +110,10 @@ Khronos glTF Validator, and returns exact SHA-256 hashes for both source and
 output. `ModelConverterEvidence` diagnostics use the shared
 `@plasius/asset-contracts` vocabulary.
 
-The following inputs fail closed in this release:
+The following inputs fail closed in the original strict validation profile:
 
 - `.gltf` JSON bundles and all external or data URIs;
-- JPEG images until a bounded, reviewed full decoder is released;
+- JPEG images (use the explicit resource-import profile for bounded JPEG admission);
 - indexed PNG images until palette indices are fully decoded and validated;
 - glTF extensions, including Draco, meshopt, Basis Universal, and WebP paths;
 - animation, skinning, morph targets, sparse accessors, lines, points, strips,
