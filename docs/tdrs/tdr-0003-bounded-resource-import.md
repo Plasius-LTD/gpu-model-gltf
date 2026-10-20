@@ -20,6 +20,9 @@ Reference acquisition is sequential and bounded by the remaining per-resource
 and aggregate budget. Data URI types/encoding, original buffer ranges, BIN
 padding, MIME/magic, full image decoding, JSON complexity, canonical geometry
 expansion, instancing work, and a conservative working-set estimate are checked.
+Repeated accessor/primitive expansion and instanced world vertices are counted
+before any resource acquisition or Khronos traversal, so a small source with
+many repeated references cannot postpone its work limit until canonicalization.
 No input URI/provider string is copied into diagnostics. The final normalized
 resource set passes the pinned official Khronos validator; canonical payloads
 must also pass the released core's private verification boundary. The source
