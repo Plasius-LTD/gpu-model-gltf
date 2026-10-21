@@ -16,6 +16,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
+  - Honor requested version bumps after interrupted publication when npm or GitHub already published the prepared version, preserving immutable versions and release safeguards.
   - Count referenced morph accessor components and node morph bindings in canonical export deformation preflight before reading any resource payload.
 
 - **Security**

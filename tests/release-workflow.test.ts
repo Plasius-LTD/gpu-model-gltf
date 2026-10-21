@@ -1,4 +1,7 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -24,9 +27,7 @@ describe("release preparation workflow", () => {
     expect(workflow).toContain(
       'if gh pr merge "${PR_NUMBER}" --squash --delete-branch >/dev/null 2>&1; then',
     );
-    expect(workflow).toContain(
-      "merged after required checks completed.",
-    );
+    expect(workflow).toContain("merged after required checks completed.");
   });
 
   it("runs trusted pull-request and exact-main validation on hosted runners", () => {
@@ -46,8 +47,12 @@ describe("release preparation workflow", () => {
     );
     expect(cdWorkflow).toContain('npm publish "./${TARBALL}"');
     expect(cdWorkflow.match(/npm@11\.6\.2/gu)).toHaveLength(2);
-    expect(cdWorkflow).toContain("Revalidate exact main immediately before npm publication");
-    expect(cdWorkflow).not.toMatch(/bootstrap_first_publish|NPM_BOOTSTRAP_TOKEN|NPM_TOKEN|NODE_AUTH_TOKEN/u);
+    expect(cdWorkflow).toContain(
+      "Revalidate exact main immediately before npm publication",
+    );
+    expect(cdWorkflow).not.toMatch(
+      /bootstrap_first_publish|NPM_BOOTSTRAP_TOKEN|NPM_TOKEN|NODE_AUTH_TOKEN/u,
+    );
   });
 
   it("runs Schema privacy and sealed-package checks in CI", () => {
@@ -57,4 +62,50 @@ describe("release preparation workflow", () => {
     expect(ciWorkflow).toContain("Test private artifact policy");
     expect(ciWorkflow).toContain("Verify public package contents");
   });
+});
+
+describe("interrupted publication version selection", () => {
+  const start = workflow.indexOf('          if [ "${BUMP}" = "none" ]; then');
+  const end = workflow.indexOf("            TARGET_VER=$(node -e", start);
+  const selection =
+    workflow.slice(start, end) +
+    'TARGET_VER="fresh"\nfi\nprintf "SELECTED=%s\\n" "$TARGET_VER"';
+  it.each([
+    ["patch", "true", "draft", "fresh"],
+    ["minor", "true", "missing", "fresh"],
+    ["major", "true", "draft", "fresh"],
+    ["patch", "true", "published", "fresh"],
+    ["patch", "false", "published", "fresh"],
+    ["patch", "false", "draft", "0.5.0"],
+    ["minor", "false", "missing", "0.5.0"],
+    ["none", "true", "draft", "0.5.0"],
+    ["none", "false", "missing", "0.5.0"],
+  ])(
+    "%s with npm=%s and GitHub=%s selects %s",
+    (bump, published, release, expected) => {
+      expect(start).toBeGreaterThan(0);
+      expect(end).toBeGreaterThan(start);
+      const dir = mkdtempSync(join(tmpdir(), "gltf-release-selection-"));
+      try {
+        const file = join(dir, "CHANGELOG.md");
+        writeFileSync(file, "## [Unreleased]\n\n## [0.5.0] - 2026-10-21\n");
+        const result = spawnSync("bash", ["-e", "-c", selection], {
+          encoding: "utf8",
+          timeout: 2000,
+          env: {
+            ...process.env,
+            BUMP: bump,
+            CURRENT_VER: "0.5.0",
+            CURRENT_PUBLISHED: published,
+            CURRENT_RELEASE_STATE: release,
+            FILE: file,
+          },
+        });
+        expect(result.status, result.stderr).toBe(0);
+        expect(result.stdout).toContain(`SELECTED=${expected}`);
+      } finally {
+        rmSync(dir, { recursive: true });
+      }
+    },
+  );
 });

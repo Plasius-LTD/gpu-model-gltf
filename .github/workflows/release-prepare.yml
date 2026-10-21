@@ -241,7 +241,7 @@ jobs:
 
           if [ "${BUMP}" = "none" ]; then
             TARGET_VER="${CURRENT_VER}"
-          elif grep -Eq "^## (\[${CURRENT_VER}\]|${CURRENT_VER})( |$)" "${FILE}" && { [ "${CURRENT_PUBLISHED}" != "true" ] || [ "${CURRENT_RELEASE_STATE}" != "published" ]; }; then
+          elif grep -Eq "^## (\[${CURRENT_VER}\]|${CURRENT_VER})( |$)" "${FILE}" && { [ "${CURRENT_PUBLISHED}" != "true" ] && [ "${CURRENT_RELEASE_STATE}" != "published" ]; }; then
             echo "Reusing already-prepared incomplete release version ${CURRENT_VER}."
             TARGET_VER="${CURRENT_VER}"
           else
