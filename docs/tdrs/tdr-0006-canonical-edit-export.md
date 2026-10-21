@@ -49,7 +49,7 @@ or repacked components, 256 skins, 4096 joints, 1024 morph targets, 65536 bindin
 Images retain 4096px and 64MiB per/aggregate decoded ceilings. Graph validation
 retains 64 levels, 1M JSON values and 16MiB JSON. A conservative 768MiB working-set
 estimate charges resource copies/serialization/validation plus decoded arrays and
-images before resource I/O. Generated per-accessor allocation is checked against
+images before resource I/O. Expanded deformation preflight charges every referenced morph accessor component, per-node morph binding, skin influence row and animation value, including repeated references. Generated per-accessor allocation is checked against
 remaining binary/component budgets before allocation. Source resources are read
 sequentially; there is one deadline and no retries or network acquisition.
 

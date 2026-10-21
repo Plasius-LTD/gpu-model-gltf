@@ -141,6 +141,42 @@ describe("canonical export refusal and bounded work", () => {
       }
     },
   );
+  it("charges morph accessor components and node bindings before payload reads", async () => {
+    const original = await source();
+    const document = createGpuModelDocument({
+      ...original,
+      skeletons: [],
+      joints: [],
+      skins: [],
+      animations: [],
+      nodes: original.nodes.map((n) =>
+        Object.fromEntries(Object.entries(n).filter(([k]) => k !== "skinId")),
+      ),
+      meshes: original.meshes.map((m) => ({
+        ...m,
+        primitives: m.primitives.map((p) => ({
+          ...p,
+          attributes: p.attributes.filter(
+            (a) =>
+              !a.semantic.startsWith("JOINTS_") &&
+              !a.semantic.startsWith("WEIGHTS_"),
+          ),
+        })),
+      })),
+    });
+    const read = vi.spyOn(Blob.prototype, "arrayBuffer");
+    try {
+      await expect(
+        exportGpuModelToGltf(document, {
+          conversionEnabled: true,
+          limits: { maxDeformationElements: 16 },
+        }),
+      ).rejects.toSatisfy(code("document-resource-limit"));
+      expect(read).not.toHaveBeenCalled();
+    } finally {
+      read.mockRestore();
+    }
+  });
   it.each(["cancel", "deadline"])(
     "races an uncooperative immutable-payload read on %s",
     async (kind) => {
