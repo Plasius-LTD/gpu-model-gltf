@@ -10,6 +10,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [0.6.0] - 2026-10-21
+
+- **Added**
   - Explicit tolerant/forensic resource import using the published core skin-weight repair policy, complete immutable repair records and safe bounded numeric source evidence; shared diagnostics and material/animation conformance matrices for deterministic GLB and glTF packages.
 
 - **Changed**
@@ -593,7 +607,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/gpu-model-gltf/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/gpu-model-gltf/compare/v0.6.0...HEAD
 [1.0.0]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.0
 [1.0.13]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.13
 [1.0.17]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.17
@@ -640,3 +654,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [0.4.0]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.4.0
 [0.5.0]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.5.0
 [0.5.1]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.5.1
+[0.6.0]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.6.0
