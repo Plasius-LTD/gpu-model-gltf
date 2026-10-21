@@ -16,7 +16,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
-  - (placeholder)
+  - Preserve normative glTF defaults for omitted primitive materials with one shared canonical material, retaining authored IDs and deterministic GLB/glTF round trips.
 
 - **Security**
   - (placeholder)

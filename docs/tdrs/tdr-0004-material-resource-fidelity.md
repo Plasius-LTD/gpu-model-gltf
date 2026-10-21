@@ -30,6 +30,19 @@ Core PBR base RGBA[1,1,1,1], metallic1/roughness1, emissive[0,0,0], normal
 scale1, occlusion strength1, alpha and double-sided remain canonical fields.
 MASK defaults cutoff0.5. Extension factors with corresponding core fields are
 also projected there; other factors remain under original KHR-keyed metadata.
+
+The bounded resource importer applies this same complete mapping when
+`primitive.material` is omitted. It appends one canonical `material-N` after the
+N authored materials only if needed, shares it across all omitted primitives,
+and preserves every authored reference. An explicit empty material and an omitted
+reference therefore produce equivalent canonical/renderer defaults. Source-normalized
+GLB retains the original omission; edited canonical GLB/glTF exports the explicit
+default material and preserves its semantics on reimport. Neither path changes
+the source or the format-neutral renderer's defaults. Task #14 regression coverage
+uses both JSON and GLB, mixed references, actual registry bridge/renderer projection
+and deterministic validated exports in both layouts. One additional material is
+the complete allocation overhead; there is no extra primitive scan or resource I/O.
+
 Clearcoat normal scale is retained as `clearcoatNormalScale` in its extension.
 Only validated canonical slots hold extension texture references; no raw source
 texture index is passed as a renderer sample. Authored extension extras remain

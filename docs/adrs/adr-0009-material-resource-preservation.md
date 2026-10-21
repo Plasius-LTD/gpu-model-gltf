@@ -29,6 +29,30 @@ this grammar. Every strict/static entry point retains its extension-free default
 no public validation bypass is added. Shared bounded JSON value readers are factored
 into a leaf module, avoiding a runtime import cycle between resolution and materials.
 
+### Implicit material correction (Task #14)
+
+An omitted primitive material is equivalent to an authored empty material under
+[glTF 2.0 §3.9.6](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#default-material).
+Leaving the canonical reference absent selects renderer defaults for other formats
+and loses this equivalence. While mapping the already bounded primitives, record
+whether any reference is omitted. If so, append one empty object to a local copy
+of the authored material list and run it through the same material mapper. Bind
+all omitted references to `material-N`, where N is the authored material count.
+Existing material indices/IDs stay stable and the source is never changed.
+
+Reusing an arbitrary authored empty material would make identity depend on author
+ordering; allocating one per primitive wastes resources. Changing core or renderer
+defaults affects other formats. One deterministic adapter-owned addition avoids
+those alternatives, uses existing core contracts and adds no dependency, scan,
+I/O or global state. It remains under existing input/work/geometry/cancel limits.
+
+Fail-first JSON/GLB fixtures cover omitted/empty equivalence, several meshes,
+mixed authored/omitted references and exact input bytes. Execute the published
+runtime/core/bridge/renderer chain and canonical GLB/glTF export, Khronos validation,
+deterministic hashes and reimport. This correction uses the existing reviewed
+main/production cd.yml patch release and consumer flag rollback; no consumer loader
+cutover or change to the stricter static-demo profile is included.
+
 Expose the already Khronos-validated normalized source GLB as `normalizedGlb` on the
 import result: immutable Blob payload, exact SHA-256 and byte length. It embeds
 relative/data resources while retaining image bytes, source material/transform/sampler

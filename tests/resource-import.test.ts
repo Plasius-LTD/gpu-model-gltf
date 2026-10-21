@@ -581,7 +581,12 @@ describe("resource import fidelity and defensive limits", () => {
     expect(new DataView(bytes).getFloat32(tangent.byteOffset + 12, true)).toBe(
       -1,
     );
-    expect(document.materials).toEqual([]);
+    expect(document.materials).toHaveLength(1);
+    expect(document.materials[0]).toMatchObject({
+      id: "material-0", baseColorFactor: [1, 1, 1, 1],
+      metallicFactor: 1, roughnessFactor: 1,
+    });
+    expect(document.meshes[0]!.primitives[0]!.materialId).toBe("material-0");
   });
   it.each([5120, 5121, 5122, 5123])(
     "preserves normalized custom component type %s as canonical f32",
