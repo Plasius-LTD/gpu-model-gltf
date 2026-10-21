@@ -10,10 +10,10 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Explicit `gltf-deformation-resources-v1` import profile preserving bounded skin/joint data, morph targets, independent node weights and STEP/LINEAR/CUBICSPLINE TRS/weight animation, with deterministic material/animation source-GLB round trips. Existing static/strict profiles retain their rejection rules.
 
 - **Changed**
-  - (placeholder)
+  - Adopt released canonical core 0.6.0 and test bridge 0.4.0 for authored TRS and node-scoped morph animation; add tightening-only deformation entity and expanded-work limits.
 
 - **Fixed**
   - (placeholder)

@@ -1,6 +1,7 @@
 import { array, record, integer, fail, type JsonRecord } from "./resource-values.js";
 export { array, record, integer, fail, type JsonRecord } from "./resource-values.js";
 import { admitMaterialExtensions } from "./resource-materials.js";
+import { preflightDeformation } from "./resource-deformation.js";
 import type { ResourceResolver } from "@plasius/gpu-model-runtime";
 import {
   DEFAULT_GLB_LIMITS,
@@ -21,6 +22,14 @@ export const DEFAULT_GLTF_RESOURCE_IMPORT_LIMITS = Object.freeze({
   maxGeometryElements: 4_000_000,
   maxWorldVertices: 1_000_000,
   maxNodes: 4095,
+  maxSkins: 256,
+  maxJoints: 4096,
+  maxMorphTargets: 1024,
+  maxMorphBindings: 65_536,
+  maxAnimations: 256,
+  maxAnimationSamplers: 4096,
+  maxAnimationChannels: 8192,
+  maxDeformationElements: 1_000_000,
   timeoutMs: 30_000,
 });
 /** Acquisition, image, geometry and work ceilings for one import. */
@@ -364,6 +373,7 @@ export interface ResolvedImport {
 function preflightGeometryWork(
   document: JsonRecord,
   budget: ImportBudget,
+  deformationElements = 0,
 ): void {
   const accessors = array(document.accessors);
   const sizes: Record<string, number> = {
@@ -372,7 +382,7 @@ function preflightGeometryWork(
     VEC3: 3,
     VEC4: 4,
   };
-  let expandedElements = 0;
+  let expandedElements = deformationElements;
   const count = (index: unknown) =>
     record(accessors[integer(index, 0, accessors.length - 1)]);
   const consume = (amount: number) => {
@@ -436,6 +446,7 @@ export async function resolveImport(
   resolver: ResourceResolver | undefined,
   budget: ImportBudget,
   contentType?: string,
+  deformation = false,
 ): Promise<ResolvedImport> {
   budget.check();
   const limits = formatLimits(budget.limits);
@@ -489,8 +500,11 @@ export async function resolveImport(
     }
   }
   format.validateJsonGraph(document, limits, budget.signal);
-  format.validateClosedFeatureSet(document, limits, budget.signal, (doc) => admitMaterialExtensions(doc, budget));
-  preflightGeometryWork(document, budget);
+  let deformationElements = 0;
+  format.validateClosedFeatureSet(document, limits, budget.signal,
+    (doc) => admitMaterialExtensions(doc, budget),
+    deformation ? (doc) => { deformationElements = preflightDeformation(doc, budget); } : undefined);
+  preflightGeometryWork(document, budget, deformationElements);
   for (const key of [
     "accessors",
     "animations",
