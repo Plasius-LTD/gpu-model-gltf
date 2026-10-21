@@ -140,6 +140,18 @@ describe("core-owned allowlisted skin-weight repair", () => {
     });
     expect(out.repairs).toHaveLength(1);
   });
+  it("refuses additional weight sets explicitly before a partial normalization", async () => {
+    const { f } = damaged();
+    const p = f.json.meshes[0].primitives[0];
+    p.attributes.JOINTS_1 = p.attributes.JOINTS_0;
+    p.attributes.WEIGHTS_1 = p.attributes.WEIGHTS_0;
+    await expect(
+      importGltfToGpuModelDocument(rigBytes(f), {
+        ...rigOptions(f),
+        mode: "tolerant",
+      }),
+    ).rejects.toSatisfy(code("unsupported-gltf-feature"));
+  });
   it("reads strided and offset weight rows without changing padding", async () => {
     const { f, index, offset } = damaged();
     const start = Math.ceil(f.bytes.length / 4) * 4;

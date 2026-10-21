@@ -23,7 +23,8 @@ float32 VEC4 WEIGHTS_0 rows with finite non-negative values and positive total.
 Normalize a row if abs(sum-1)>1e-6, preserving every positive influence. Refuse
 float32 underflow, zero/negative/nonfinite totals, other representations,
 overlapping storage or shared accessor semantics. Repeated weight references
-are processed once. Other malformed constructs remain errors; no rule is added.
+are processed once. Additional WEIGHTS_1 sets are refused explicitly rather than partially normalized.
+Other malformed constructs remain errors; no rule is added.
 
 Apply only after graph/feature/expanded-work/buffer/accessor admission, stage at
 most100 bounded rows, obtain an accepted core report, then mutate private copied

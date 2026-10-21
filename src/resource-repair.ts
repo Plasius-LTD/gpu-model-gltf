@@ -31,6 +31,11 @@ export async function repairSkinWeights(
     for (const value of array(record(mesh).primitives)) {
       budget.check();
       const p = record(value);
+      if (mode !== "strict" && record(p.attributes).WEIGHTS_1 !== undefined)
+        fail(
+          "unsupported-gltf-feature",
+          "Weight repair requires one four-influence weight set; additional sets are outside this repair profile.",
+        );
       for (const [semantic, index] of Object.entries(record(p.attributes))) {
         (semantic === "WEIGHTS_0" ? candidates : otherRoles).add(
           integer(index, 0, accessors.length - 1),
