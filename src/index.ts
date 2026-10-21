@@ -46,6 +46,6 @@ export type {
 export { glbAdapter as default } from "./glb-adapter.js";
 
 export { GLTF_RESOURCE_IMPORT_PROFILE, GLTF_RESOURCE_IMPORT_FEATURE_FLAG, importGltfToGpuModelDocument } from "./resource-import.js";
-export type { ImportedGltfGpuModelDocument, ImportGltfToGpuModelDocumentOptions } from "./resource-import.js";
+export type { NormalizedGltfSourceArtifact, ImportedGltfGpuModelDocument, ImportGltfToGpuModelDocumentOptions } from "./resource-import.js";
 export { DEFAULT_GLTF_RESOURCE_IMPORT_LIMITS } from "./resource-resolution.js";
 export type { GltfResourceImportLimits } from "./resource-resolution.js";

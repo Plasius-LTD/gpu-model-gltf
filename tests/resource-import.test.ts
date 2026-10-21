@@ -353,7 +353,7 @@ describe("bounded static glTF resource import", () => {
         bytes = encoder.encode('{"asset":{"version":"2.0"},"__proto__":{}}');
       if (kind === "malformed") bytes = Uint8Array.of(0xff);
       if (kind === "unsupported") {
-        f.json.extensionsUsed = ["KHR_materials_unlit"];
+        f.json.extensionsUsed = ["VENDOR_unsupported_material"];
         bytes = encoder.encode(JSON.stringify(f.json));
       }
       if (kind === "view") {

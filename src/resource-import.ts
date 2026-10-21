@@ -1,6 +1,6 @@
 import type { GpuModelDocument } from "@plasius/gpu-model-core";
 import type { ResourceResolver } from "@plasius/gpu-model-runtime";
-import { GlbAdapterError } from "./glb-adapter.js";
+import { gltfFormatInternals as format, GlbAdapterError } from "./glb-adapter.js";
 import { canonicalize } from "./resource-canonical.js";
 import {
   ImportBudget,
@@ -24,11 +24,18 @@ export interface ImportGltfToGpuModelDocumentOptions {
   readonly contentType?: string;
   readonly limits?: Partial<GltfResourceImportLimits>;
 }
+/** Source-normalized self-contained GLB. It does not serialize edits to the canonical document. */
+export interface NormalizedGltfSourceArtifact {
+  readonly contentHash: string;
+  readonly byteLength: number;
+  readonly payload: Blob;
+}
 /** Immutable canonical result with exact entry point identity and validator evidence. */
 export interface ImportedGltfGpuModelDocument {
   readonly profile: typeof GLTF_RESOURCE_IMPORT_PROFILE;
   readonly sourceContentHash: string;
   readonly document: GpuModelDocument;
+  readonly normalizedGlb: NormalizedGltfSourceArtifact;
   readonly validator: Readonly<{
     id: "KhronosGroup/glTF-Validator";
     version: string;
@@ -77,11 +84,17 @@ export async function importGltfToGpuModelDocument(
       budget,
       GLTF_RESOURCE_IMPORT_PROFILE,
     );
+    const normalizedContentHash = await budget.wait(format.sha256(source.normalizedBytes));
     budget.check();
     return Object.freeze({
       profile: GLTF_RESOURCE_IMPORT_PROFILE,
       sourceContentHash: source.sourceContentHash,
       document,
+      normalizedGlb: Object.freeze({
+        contentHash: normalizedContentHash,
+        byteLength: source.normalizedBytes.byteLength,
+        payload: new Blob([source.normalizedBytes as Uint8Array<ArrayBuffer>], { type: "model/gltf-binary" }),
+      }),
       validator: source.validator.evidence,
     });
   } catch (error) {

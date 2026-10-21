@@ -139,3 +139,11 @@ CD prepare/minor and publish on exact main, production npm OIDC, package registr
 and provenance/installed probes. Pipeline-generated release metadata is reviewed
 separately. Record exact results in #13 and link this mapping in gpu-shared#55;
 leave the parent Feature and subsequent tasks incomplete.
+
+## Subsequent material fidelity
+
+Task#14 extends the explicit importer with common material/texture transforms and
+source-normalized material/resource round trips. See
+[TDR0004](./tdr-0004-material-resource-fidelity.md) for the exact admitted grammar,
+source-export scope, current renderer refusal/visual limits and rollout controls.
+The original #13 evidence above remains scoped to its released implementation.

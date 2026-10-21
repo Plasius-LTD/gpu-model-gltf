@@ -10,12 +10,14 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Preserve common KHR material factors/defaults, twelve extension texture bindings, unlit workflow and texture transforms in the explicit bounded resource importer.
+  - Return a hashed immutable source-normalized GLB artifact with embedded PNG/JPEG resources for material/resource semantic round trips; edited canonical document/package export remains separately tracked.
 
 - **Changed**
-  - (placeholder)
+  - Consume released core0.5.0 for validated extended material slots; verify actual glTF ingestion against published bridge0.3.0 and renderer0.2.53 with the legacy loader retained.
 
 - **Fixed**
+  - Apply glTF IOR1.5/clearcoat roughness0/alpha-mask cutoff0.5 defaults, retain sRGB sheen/specular color interpretations, and reuse embedded image views during source round trips.
   - Reject repeated accessor expansion and instanced world-vertex work before external resource acquisition or Khronos validation can multiply processing cost.
 
 - **Security**
