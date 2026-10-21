@@ -135,6 +135,19 @@ export async function repairSkinWeights(
         "Aliased skin-weight semantics cannot be repaired.",
       );
     const end = offset + (count - 1) * stride + 16;
+    for (const image of array(document.images)) {
+      budget.check();
+      const imageView = record(
+        views[integer(record(image).bufferView, 0, views.length - 1)],
+      );
+      const first = integer(imageView.byteOffset ?? 0),
+        last = first + integer(imageView.byteLength, 1);
+      if (first < end && last > offset)
+        fail(
+          "unsupported-gltf-feature",
+          "Skin weights overlapping embedded image storage cannot be repaired.",
+        );
+    }
     for (let j = 0; j < accessors.length; j++) {
       if ((j & 1023) === 0) budget.check();
       if (j === index) continue;

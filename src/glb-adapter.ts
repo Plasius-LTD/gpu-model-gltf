@@ -1316,17 +1316,15 @@ function validateKhronosReport(
       `Khronos glTF validation ${severity} at ${normalizePointer(issue.pointer)}.`,
     );
   });
-  if (
-    issueCount > rawMessages.length &&
-    diagnostics.length < limits.maxDiagnostics
-  ) {
-    diagnostics.push(
-      diagnostic(
-        errorCount > 0 ? "blocking" : "warning",
-        "gltf-validator-issues-truncated",
-        "Additional Khronos glTF validation issues were omitted by the configured bound.",
-      ),
+  if (issueCount > diagnostics.length) {
+    const omitted = diagnostic(
+      errorCount > 0 || validatorBlockingOverride ? "blocking" : "warning",
+      "gltf-validator-issues-truncated",
+      "Complete Khronos validation produced additional findings omitted by the reporting bound.",
     );
+    if (diagnostics.length === limits.maxDiagnostics)
+      diagnostics[diagnostics.length - 1] = omitted;
+    else diagnostics.push(omitted);
   }
   if (errorCount > 0 || validatorBlockingOverride) {
     const publicDiagnostics =

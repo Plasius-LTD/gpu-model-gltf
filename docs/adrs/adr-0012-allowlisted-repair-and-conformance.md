@@ -22,7 +22,7 @@ already fit. Narrow the core `non-normalized-weights` rule to dense unnormalized
 float32 VEC4 WEIGHTS_0 rows with finite non-negative values and positive total.
 Normalize a row if abs(sum-1)>1e-6, preserving every positive influence. Refuse
 float32 underflow, zero/negative/nonfinite totals, other representations,
-overlapping storage or shared accessor semantics. Repeated weight references
+overlapping accessor/image storage or shared accessor semantics. Repeated weight references
 are processed once. Additional WEIGHTS_1 sets are refused explicitly rather than partially normalized.
 Other malformed constructs remain errors; no rule is added.
 

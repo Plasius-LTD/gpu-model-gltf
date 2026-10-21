@@ -33,7 +33,7 @@ are normalized when their sum differs from one by more than 1e-6. No influence
 is discarded. This repair profile requires one four-influence weight set;
 additional WEIGHTS_1 sets are explicitly refused in tolerant/forensic modes. Source byte/range/entity/finite validation precedes repair; exact
 final Khronos validation follows it. Shared weight references are repaired once.
-Overlapping storage/other-semantic aliases, negative/zero-total/nonfinite rows,
+Overlapping accessor/image storage or other-semantic aliases, negative/zero-total/nonfinite rows,
 float32 underflow of a positive influence, other representations and other
 standard violations are refused. No normals/winding/index/material/URI/transform
 repair or missing-bound synthesis is implied. Valid strict/static paths remain.

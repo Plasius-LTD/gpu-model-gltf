@@ -6,6 +6,7 @@ import {
 } from "../src/index.js";
 import {
   fixture,
+  png,
   extended,
   options,
   encoder,
@@ -32,6 +33,56 @@ function damaged(interpolation = "LINEAR") {
   return { f, index, offset };
 }
 describe("core-owned allowlisted skin-weight repair", () => {
+  it("refuses weights overlapping validated embedded image bytes", async () => {
+    const { f, index, offset } = damaged();
+    const chunk = (name: string, payload: Uint8Array) => {
+      const b = new Uint8Array(payload.length + 12),
+        v = new DataView(b.buffer);
+      v.setUint32(0, payload.length);
+      b.set(encoder.encode(name), 4);
+      b.set(payload, 8);
+      let crc = 0xffffffff;
+      for (const value of b.subarray(4, 8 + payload.length)) {
+        crc ^= value;
+        for (let bit = 0; bit < 8; bit++)
+          crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+      }
+      v.setUint32(b.length - 4, (crc ^ 0xffffffff) >>> 0);
+      return b;
+    };
+    const pad = chunk("vpAg", new Uint8Array(3)),
+      weights = chunk("vpBg", f.bytes.slice(offset, offset + 48));
+    const image = new Uint8Array(png.length + pad.length + weights.length);
+    image.set(png.subarray(0, 33));
+    image.set(pad, 33);
+    image.set(weights, 33 + pad.length);
+    image.set(png.subarray(33), 33 + pad.length + weights.length);
+    const start = Math.ceil(f.bytes.length / 4) * 4,
+      data = new Uint8Array(start + image.length);
+    data.set(f.bytes);
+    data.set(image, start);
+    f.bytes = data;
+    f.json.buffers[0].byteLength = data.length;
+    const imageView = f.json.bufferViews.length;
+    f.json.bufferViews.push({
+      buffer: 0,
+      byteOffset: start,
+      byteLength: image.length,
+    });
+    f.json.images[0] = { bufferView: imageView, mimeType: "image/png" };
+    f.json.bufferViews[f.json.accessors[index].bufferView] = {
+      buffer: 0,
+      byteOffset: start + 56,
+      byteLength: 48,
+      target: 34962,
+    };
+    await expect(
+      importGltfToGpuModelDocument(rigBytes(f), {
+        ...rigOptions(f),
+        mode: "tolerant",
+      }),
+    ).rejects.toSatisfy(code("unsupported-gltf-feature"));
+  });
   it.each([undefined, "strict"] as const)(
     "keeps %s import strict",
     async (mode) => {
@@ -328,6 +379,29 @@ describe("core-owned allowlisted skin-weight repair", () => {
   });
 });
 describe("complete bounded Khronos evidence", () => {
+  it("reserves a diagnostic for omitted findings after complete validation", () => {
+    const r = {
+      issues: {
+        numErrors: 0,
+        numWarnings: 3,
+        numInfos: 0,
+        numHints: 0,
+        truncated: false,
+        messages: Array.from({ length: 3 }, () => ({
+          severity: 1,
+          code: "TEST_WARNING",
+        })),
+      },
+    };
+    const out = internals.validateKhronosReport(
+      r,
+      { ...DEFAULT_GLB_LIMITS, maxDiagnostics: 2 },
+      "test",
+    );
+    expect(out.evidence.issueCount).toBe(3);
+    expect(out.diagnostics).toHaveLength(2);
+    expect(out.diagnostics[1]?.code).toBe("gltf-validator-issues-truncated");
+  });
   it("refuses actual incomplete validation even when all reported issues are nonblocking", async () => {
     const f = fixture();
     for (let i = 0; i < 105; i++)
@@ -419,7 +493,7 @@ describe("complete bounded Khronos evidence", () => {
       diagnostics: [
         {
           severity: "blocking",
-          code: "gltf-image-unrecognized-format",
+          code: "gltf-validator-issues-truncated",
           message: expect.any(String),
         },
       ],

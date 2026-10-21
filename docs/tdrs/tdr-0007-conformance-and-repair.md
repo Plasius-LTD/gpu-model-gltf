@@ -38,7 +38,7 @@ All existing 16MiB entry/64MiB resource+aggregate, 4M geometry, 1M deformation,
 WEIGHTS_0 candidate once after accessor/repeated-reference admission. Work is
 bounded by admitted geometry/deformation components. At most100 row writes are
 staged, and overlaps are conservatively rejected against admitted accessor
-buffer views. No source array aliases are mutated; binary acquisition already
+buffer and embedded-image views. No source array aliases are mutated; binary acquisition already
 owns a private copy. The complete ledger has at most100 entries, and each core
 record includes four original finite numbers, action/severity/path/confidence.
 Core's evaluator snapshots and freezes evidence; forensic report construction
