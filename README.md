@@ -12,7 +12,7 @@ privately verifies the canonical scene document returned by the demo importer.
 `importGltfToGpuModelDocument(bytes, options)` selects `gltf-static-resources-v1`.
 It admits glTF 2.0 JSON and GLB, multiple external or base64 data-URI buffers,
 embedded or relative PNG/JPEG images, dense static triangle geometry, and core
-metallic-roughness materials and texture slots. External resources pass through
+metallic-roughness/unlit materials, common KHR material extensions and texture transforms. External resources pass through
 the released `@plasius/gpu-model-runtime` resolver; this package owns reference
 admission, buffer layout, image validation and canonical mapping. The default
 `glbAdapter` and the strict/static demo APIs retain their narrower profiles below.
@@ -36,6 +36,9 @@ const result = await importGltfToGpuModelDocument(gltfBytes, {
   signal,
 });
 // result.document contains privately verified immutable canonical resources.
+// result.normalizedGlb.payload is a self-contained, source-normalized GLB Blob.
+// Its contentHash/byteLength identify exact output bytes; it does not serialize
+// edits to result.document. Full canonical editing/export belongs to Task #16.
 ```
 
 For URL acquisition, supply the runtime resolver's trusted `baseUrl` and normal
@@ -72,10 +75,31 @@ node/mesh/material names and bounded extras remain content in the returned
 model (`metadata.sourceExtras` / material `sourceMetadata.sourceExtras`), never
 logging or diagnostics. Source URI/provider strings are not copied into it.
 
-This profile rejects extensions, skins, morphs, animation, sparse accessors,
+The admitted extension grammar is `KHR_materials_clearcoat`, `transmission`,
+`sheen`, `ior`, `specular`, `volume`, `iridescence`, `anisotropy`, `dispersion`,
+`unlit` (each with the `KHR_materials_` prefix), and `KHR_texture_transform`.
+Only material/textureInfo locations are admitted. Unknown required **and optional**
+extensions, undeclared payloads, wrong locations, malformed factors, unsupported
+properties and incompatible unlit combinations fail explicitly before resource I/O.
+Core slots hold texture references; finite extension metadata holds factors/defaults.
+Shared images get separate sRGB/linear/normal interpretations, including sheen and
+specular color. Texture offsets, scale, rotation in radians, selected UV and normal
+scales retain authored semantics; no transform is silently baked or discarded.
+See the [exact defaults/channels and consumer limits](docs/tdrs/tdr-0004-material-resource-fidelity.md).
+
+`normalizedGlb` embeds admitted relative/data/embedded resources and retains exact
+encoded PNG/JPEG bytes, materials, transforms, samplers and authored image metadata.
+It exposes the bounded normalized GLB already checked by Khronos, as an immutable
+Blob with a separate output hash. Repeated reimport does not accumulate image views.
+It exports the **source**, not a possibly edited canonical model; canonical GLB/glTF
+package layouts remain Task #16. Output can exceed the 16 MiB entry-point ceiling
+when external resources are embedded; reimport then fails that existing limit.
+No budget is raised to make a round trip succeed.
+
+This profile rejects skins, morphs, animation, sparse accessors,
 non-triangle topology, cameras, multiple scenes and orphan nodes explicitly.
 Indexed/interlaced PNG remains unsupported. Those broader fidelity/repair paths
-belong to Tasks #14–#17. A strict final Khronos validation and canonical-core
+belong to Tasks #15–#17. A strict final Khronos validation and canonical-core
 verification must both succeed; unknown failures return bounded reason codes.
 Cancellation/deadlines race uncooperative asynchronous providers and propagate
 an abort signal. Synchronous parsing, JPEG decoding and canonical validation
@@ -91,6 +115,16 @@ existing loader, and return to the prior package version. Never route a rejected
 broad asset into the narrower demo path as a permissive fallback. See
 [showcase mapping and NFR evidence](docs/tdrs/tdr-0003-bounded-resource-import.md)
 and [ADR-0008](docs/adrs/adr-0008-bounded-json-glb-resource-import.md).
+Material mapping and source-normalized output are recorded in
+[ADR-0009](docs/adrs/adr-0009-material-resource-preservation.md).
+
+The canonical producer and bridge must use the same released core0.5.0 instance
+and module format. Test consumers use bridge0.3.0 / renderer0.2.53. The renderer
+accepts UV0/identity bindings and explicitly refuses other UV/transform forms;
+alpha mask is also refused, while advanced shading has existing renderer limits.
+Canonical factor/resource retention is not physical appearance certification.
+Keep the existing loader and remote rollback; this release does not cut over
+`gpu-shared`, register a broad cached runtime adapter, or complete Feature1150.
 
 ## Supported strict validation slice
 

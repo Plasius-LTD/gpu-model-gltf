@@ -1,3 +1,6 @@
+import { array, record, integer, fail, type JsonRecord } from "./resource-values.js";
+export { array, record, integer, fail, type JsonRecord } from "./resource-values.js";
+import { admitMaterialExtensions } from "./resource-materials.js";
 import type { ResourceResolver } from "@plasius/gpu-model-runtime";
 import {
   DEFAULT_GLB_LIMITS,
@@ -24,7 +27,6 @@ export const DEFAULT_GLTF_RESOURCE_IMPORT_LIMITS = Object.freeze({
 export type GltfResourceImportLimits = {
   readonly [Key in keyof typeof DEFAULT_GLTF_RESOURCE_IMPORT_LIMITS]: number;
 };
-export type JsonRecord = Record<string, unknown>;
 const typedArrayKind = Object.getOwnPropertyDescriptor(
   Object.getPrototypeOf(Uint8Array.prototype),
   Symbol.toStringTag,
@@ -34,40 +36,6 @@ export function isByteArray(value: unknown): value is Uint8Array {
   return (
     ArrayBuffer.isView(value) && typedArrayKind.call(value) === "Uint8Array"
   );
-}
-export function fail(
-  code: ConstructorParameters<typeof GlbAdapterError>[0],
-  message: string,
-): never {
-  throw new GlbAdapterError(code, message);
-}
-export function record(value: unknown): JsonRecord {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    fail("invalid-gltf-document", "A glTF object is invalid.");
-  return value as JsonRecord;
-}
-export function array(value: unknown): unknown[] {
-  if (value === undefined) return [];
-  if (!Array.isArray(value))
-    fail("invalid-gltf-document", "A glTF array is invalid.");
-  return value;
-}
-export function integer(
-  value: unknown,
-  min = 0,
-  max = Number.MAX_SAFE_INTEGER,
-): number {
-  if (
-    typeof value !== "number" ||
-    !Number.isSafeInteger(value) ||
-    value < min ||
-    value > max
-  )
-    fail(
-      "invalid-gltf-document",
-      "A glTF integer is outside its admitted range.",
-    );
-  return value;
 }
 export function limitsFor(value: unknown): GltfResourceImportLimits {
   const input = value === undefined ? {} : record(value);
@@ -389,6 +357,7 @@ export interface ResolvedImport {
     height: number;
   }[];
   readonly sourceContentHash: string;
+  readonly normalizedBytes: Uint8Array;
   readonly validator: Awaited<ReturnType<typeof format.validateWithKhronos>>;
 }
 /** Bound repeated accessor/mesh references before acquisition or Khronos traversal. */
@@ -520,7 +489,7 @@ export async function resolveImport(
     }
   }
   format.validateJsonGraph(document, limits, budget.signal);
-  format.validateClosedFeatureSet(document, limits, budget.signal);
+  format.validateClosedFeatureSet(document, limits, budget.signal, (doc) => admitMaterialExtensions(doc, budget));
   preflightGeometryWork(document, budget);
   for (const key of [
     "accessors",
@@ -729,16 +698,16 @@ export async function resolveImport(
       width: dims.width,
       height: dims.height,
     });
-    const viewIndex = normalizedViews.length;
-    const offset = ref
-      ? append(bytes)
-      : normalizedViews[image.bufferView as number]!.byteOffset;
-    normalizedViews.push({
+    const viewIndex = ref ? normalizedViews.length : integer(image.bufferView);
+    if (ref) normalizedViews.push({
       buffer: 0,
-      byteOffset: offset,
+      byteOffset: append(bytes),
       byteLength: bytes.length,
     });
-    normalizedImages.push({ bufferView: viewIndex, mimeType: declared });
+    // Embedded resources already have a normalized view. Reuse it so repeated
+    // source round trips do not grow duplicate views; retain authored image metadata.
+    const { uri: _uri, bufferView: _view, ...imageMetadata } = image;
+    normalizedImages.push({ ...imageMetadata, bufferView: viewIndex, mimeType: declared });
   }
   budget.check();
   const binary = new Uint8Array(total);
@@ -783,6 +752,7 @@ export async function resolveImport(
     binary,
     images,
     sourceContentHash,
+    normalizedBytes,
     validator,
   };
 }

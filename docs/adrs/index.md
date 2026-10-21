@@ -8,3 +8,4 @@
 - [ADR-0006: Bounded GLB to Canonical Demo Import](./adr-0006-bounded-glb-to-canonical-demo-import.md)
 - [ADR-0007: Hosted OIDC Package Publication](./adr-0007-hosted-oidc-package-publication.md)
 - [ADR-0008: Bounded JSON/GLB Resource Import](./adr-0008-bounded-json-glb-resource-import.md)
+- [ADR-0009: Material Resource Preservation](./adr-0009-material-resource-preservation.md)

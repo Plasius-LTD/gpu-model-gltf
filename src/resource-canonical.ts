@@ -1,3 +1,4 @@
+import { materialExtensions, textureInfo, colorSpace } from "./resource-materials.js";
 import {
   CANONICAL_GPU_MODEL_COORDINATE_SYSTEM,
   GPU_MODEL_DOCUMENT_SCHEMA_VERSION,
@@ -10,6 +11,7 @@ import {
   type GpuModelResourceInspection,
   type GpuModelResourceVerificationContext,
   type GpuModelTexture,
+  type GpuModelTextureUsage,
   type GpuModelVec3,
 } from "@plasius/gpu-model-core";
 import { gltfFormatInternals as format } from "./glb-adapter.js";
@@ -152,29 +154,13 @@ function mapMaterials(source: ResolvedImport): {
   materials: GpuModelMaterial[];
   textures: GpuModelTexture[];
 } {
-  const usages = new Map<number, Set<string>>();
-  const bind = (value: unknown, usage: string) => {
+  const usages = new Map<number, Set<GpuModelTextureUsage>>();
+  const bind = (value: unknown, usage: GpuModelTextureUsage) => {
     if (value === undefined) return undefined;
-    const info = record(value);
-    const index = integer(
-      info.index,
-      0,
-      array(source.document.textures).length - 1,
-    );
-    const set = usages.get(index) ?? new Set<string>();
-    set.add(usage);
-    usages.set(index, set);
-    return {
-      textureId: `texture-${index}`,
-      texCoordSet: integer(info.texCoord ?? 0, 0, 7),
-      colorSpace:
-        usage === "base-color" || usage === "emissive"
-          ? ("srgb" as const)
-          : usage === "normal"
-            ? ("normal-map" as const)
-            : ("linear" as const),
-      intendedUsage: usage,
-    };
+    const { index, ...interpretation } = textureInfo(value, source.document, usage === "normal" || usage === "clearcoat-normal", usage === "occlusion");
+    const set = usages.get(index) ?? new Set<GpuModelTextureUsage>();
+    set.add(usage); usages.set(index, set);
+    return { textureId: `texture-${index}`, ...interpretation, colorSpace: colorSpace(usage), intendedUsage: usage };
   };
   const materials = array(source.document.materials).map((value, i) => {
     const m = record(value);
@@ -192,12 +178,13 @@ function mapMaterials(source: ResolvedImport): {
       ["occlusion", bind(m.occlusionTexture, "occlusion")],
       ["emissive", bind(m.emissiveTexture, "emissive")],
     ].filter(([, v]) => v !== undefined);
+    const extension = materialExtensions(m, bind);
     return {
+      ...extension,
       id: `material-${i}`,
       ...(m.name === undefined ? {} : { name: m.name }),
-      workflow: "metallic-roughness",
       alphaMode: String(m.alphaMode ?? "OPAQUE").toLowerCase(),
-      ...(m.alphaCutoff === undefined ? {} : { alphaCutoff: m.alphaCutoff }),
+      ...(m.alphaMode === "MASK" ? { alphaCutoff: m.alphaCutoff ?? 0.5 } : {}),
       doubleSided: m.doubleSided ?? false,
       baseColorFactor: tuple(pbr.baseColorFactor, [1, 1, 1, 1]),
       metallicFactor: pbr.metallicFactor ?? 1,
@@ -209,8 +196,7 @@ function mapMaterials(source: ResolvedImport): {
       ...(m.occlusionTexture === undefined
         ? {}
         : { occlusionStrength: record(m.occlusionTexture).strength ?? 1 }),
-      textures: Object.fromEntries(textureEntries),
-      extensions: {},
+      textures: { ...Object.fromEntries(textureEntries), ...extension.textures },
       sourceMetadata: m.extras === undefined ? {} : { sourceExtras: m.extras },
     } as unknown as GpuModelMaterial;
   });
@@ -241,8 +227,8 @@ function mapMaterials(source: ResolvedImport): {
         ? {}
         : record(rawSamplers[integer(t.sampler, 0, rawSamplers.length - 1)]);
     const min = integer(s.minFilter ?? 9987);
-    const usage = [...(usages.get(i) ?? [])];
-    const admittedSpaces = [...(spaces.get(i) ?? new Set(["linear"]))];
+    const usage = [...(usages.get(i) ?? [])].sort();
+    const admittedSpaces = [...(spaces.get(i) ?? new Set(["linear"]))].sort();
     return admittedSpaces.map(
       (space) =>
         ({
@@ -253,11 +239,7 @@ function mapMaterials(source: ResolvedImport): {
           byteLength: image.bytes.length,
           intendedUsage: usage.filter(
             (u) =>
-              (u === "base-color" || u === "emissive"
-                ? "srgb"
-                : u === "normal"
-                  ? "normal-map"
-                  : "linear") === space,
+              colorSpace(u) === space,
           ),
           colorSpace: space,
           sampler: {
@@ -662,7 +644,7 @@ export async function canonicalize(
             sourceFormat: source.sourceFormat,
             sourceContentHash: source.sourceContentHash,
             converterId: "gltf-resource-importer",
-            converterVersion: "2026-10-20.v1",
+            converterVersion: "2026-10-21.v2",
           },
           diagnostics: [
             {

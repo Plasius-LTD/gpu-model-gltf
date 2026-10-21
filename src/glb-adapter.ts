@@ -605,12 +605,14 @@ function validateClosedFeatureSet(
   document: Record<string, unknown>,
   limits: GlbResourceLimits,
   signal?: AbortSignal,
+  extensionAdmission?: (document: Record<string, unknown>) => void,
 ): void {
   const asset = asRecord(document.asset, "asset");
   if (asset.version !== "2.0") fail("invalid-gltf-document", "glTF asset.version must be exactly 2.0.");
   const used = asArray(document.extensionsUsed, "extensionsUsed");
   const required = asArray(document.extensionsRequired, "extensionsRequired");
-  if (used.length > 0 || required.length > 0) {
+  if (extensionAdmission) extensionAdmission(document);
+  else if (used.length > 0 || required.length > 0) {
     fail("unsupported-gltf-feature", "This release admits only extension-free core glTF 2.0 assets.");
   }
   if (asArray(document.animations, "animations").length > 0 || asArray(document.skins, "skins").length > 0) {
@@ -652,7 +654,7 @@ function validateClosedFeatureSet(
   assertCount(document, "materials", limits.maxMaterials);
   assertCount(document, "textures", limits.maxTextures);
   assertCount(document, "images", limits.maxImages);
-  if (hasExtensionPayload(document, signal)) {
+  if (!extensionAdmission && hasExtensionPayload(document, signal)) {
     fail("unsupported-gltf-feature", "This release admits only extension-free core glTF 2.0 assets.");
   }
 }
