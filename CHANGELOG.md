@@ -10,6 +10,20 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [0.4.0] - 2026-10-21
+
+- **Added**
   - Explicit `gltf-deformation-resources-v1` import profile preserving bounded skin/joint data, morph targets, independent node weights and STEP/LINEAR/CUBICSPLINE TRS/weight animation, with deterministic material/animation source-GLB round trips. Existing static/strict profiles retain their rejection rules.
 
 - **Changed**
@@ -550,7 +564,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ---
 
-[Unreleased]: https://github.com/Plasius-LTD/gpu-model-gltf/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Plasius-LTD/gpu-model-gltf/compare/v0.4.0...HEAD
 [1.0.0]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.0
 [1.0.13]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.13
 [1.0.17]: https://github.com/Plasius-LTD/schema/releases/tag/v1.0.17
@@ -594,3 +608,4 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 [0.1.6]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.1.6
 [0.2.0]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.2.0
 [0.3.0]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.3.0
+[0.4.0]: https://github.com/Plasius-LTD/gpu-model-gltf/releases/tag/v0.4.0
