@@ -660,6 +660,7 @@ export async function canonicalize(
             converterVersion: deformation ? "2026-10-21.v3" : "2026-10-21.v2",
           },
           diagnostics: [
+            ...source.diagnostics.map(d => ({ ...d, severity: d.severity === "blocking" ? "error" as const : d.severity })),
             {
               severity: "info",
               code: "gltf-resource-canonicalized",

@@ -7,6 +7,66 @@ the dedicated format boundary defined by site ADR 0094; runtime discovery stays
 in `@plasius/gpu-model-runtime`, while `@plasius/gpu-model-core` owns and
 privately verifies the canonical scene document returned by the demo importer.
 
+## Strict, tolerant and forensic resource import
+
+Resource import defaults to `mode: "strict"`. The opt-in tolerant and forensic
+modes reuse `@plasius/gpu-model-core`'s published diagnostic evaluator and
+`GpuModelRepairRecord` contract, not a format-local repair policy:
+
+```ts
+const imported = await importGltfToGpuModelDocument(sourceBytes, {
+  conversionEnabled: remotelyEvaluatedConversionDecision,
+  profile: "gltf-deformation-resources-v1",
+  mode: "tolerant", // or "forensic" for bounded numeric damaged-source evidence
+  resourceResolver,
+  signal,
+});
+// imported.repairs: complete frozen core records, with original numeric values,
+// action, severity, affectedPath, confidence and ruleId.
+// imported.diagnosticReport: core-owned mode/acceptance/repair/loss ledger.
+// imported.diagnostics: bounded shared ModelConverterDiagnostic findings.
+```
+
+The sole implemented repair is core rule `non-normalized-weights`: finite,
+non-negative dense unnormalized float32 VEC4 `WEIGHTS_0` rows with positive total
+are normalized when their sum differs from one by more than 1e-6. No influence
+is discarded. Source byte/range/entity/finite validation precedes repair; exact
+final Khronos validation follows it. Shared weight references are repaired once.
+Overlapping storage/other-semantic aliases, negative/zero-total/nonfinite rows,
+float32 underflow of a positive influence, other representations and other
+standard violations are refused. No normals/winding/index/material/URI/transform
+repair or missing-bound synthesis is implied. Valid strict/static paths remain.
+
+Forensic mode additionally retains only raw damaged numeric weight fields and
+fixed numeric paths, anchored by exact original-entry and assembled pre-repair
+binary SHA256. This is bounded partial source evidence in core `rawSource`, not
+an archive of source JSON or package files. Names, URIs, metadata, arbitrary
+source strings and provider text never enter it. The core snapshot is immutable
+and capped at 64KiB (with core depth/value/member limits); no storage or logging
+is performed. Unrepairable input returns a controlled error and no partial
+canonical/evidence result. Applications needing a full raw archive must use a
+separately governed private evidence store. Existing `validateAndExportGlb` and
+static demo APIs still refuse tolerant/forensic modes.
+
+`limits.maxDiagnostics` only tightens the 100-entry ceiling for each public
+finding list and the complete core repair ledger. Too many repairs fail.
+Findings may end with `gltf-import-diagnostics-truncated`; the complete separate
+core ledger remains available. Canonical diagnostics contain bounded findings
+plus one canonicalization record; forensic raw evidence stays outside canonical
+metadata and interchange. Exact canonical exports expose `diagnostics` too.
+
+Validation has an independent hard 100-issue work ceiling. A truncated report
+fails with `gltf-validation-incomplete`, including warning-only saturation.
+Tightening presentation limits never hides a blocking finding. Raw validator
+messages and authored property names are omitted; only known schema pointers or
+fixed generic locations appear. Original source hashes identify input bytes;
+normalized/output hashes identify repaired bytes. No telemetry is emitted.
+
+Rollback consumers to strict/default mode or disable the inherited remote
+`gpu.model.conversion.enabled` decision. No new capability, repair rule, codec,
+package or dependency is introduced. See [the conformance matrix](docs/tdrs/tdr-0007-conformance-and-repair.md)
+and [ADR0012](docs/adrs/adr-0012-allowlisted-repair-and-conformance.md).
+
 ## Canonical edit export
 
 `exportGpuModelToGltf(document, options)` serializes a privately verified

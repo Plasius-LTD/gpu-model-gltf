@@ -10,13 +10,13 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Explicit tolerant/forensic resource import using the published core skin-weight repair policy, complete immutable repair records and safe bounded numeric source evidence; shared diagnostics and material/animation conformance matrices for deterministic GLB and glTF packages.
 
 - **Changed**
   - (placeholder)
 
 - **Fixed**
-  - (placeholder)
+  - Reject incomplete Khronos validation at its hard issue ceiling; preserve blocking findings under tightened reporting limits and omit authored property names from diagnostic locations.
 
 - **Security**
   - (placeholder)

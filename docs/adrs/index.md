@@ -12,3 +12,5 @@
 - [ADR-0010: Opt-in Deformation Preservation](./adr-0010-opt-in-deformation-preservation.md)
 
 - [ADR-0011: Deterministic Canonical Edit Export](./adr-0011-canonical-edit-export.md)
+
+- [ADR-0012: Allowlisted Repair and Complete Conformance](./adr-0012-allowlisted-repair-and-conformance.md)
