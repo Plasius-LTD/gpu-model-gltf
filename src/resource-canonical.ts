@@ -148,7 +148,7 @@ function tuple(value: unknown, fallback: readonly number[]) {
         return v;
       });
 }
-function mapMaterials(source: ResolvedImport): {
+function mapMaterials(source: ResolvedImport, needsDefault: boolean): {
   materials: GpuModelMaterial[];
   textures: GpuModelTexture[];
 } {
@@ -160,7 +160,12 @@ function mapMaterials(source: ResolvedImport): {
     set.add(usage); usages.set(index, set);
     return { textureId: `texture-${index}`, ...interpretation, colorSpace: colorSpace(usage), intendedUsage: usage };
   };
-  const materials = array(source.document.materials).map((value, i) => {
+  // glTF2 §3.9.6 defines an omitted reference as an empty material. Reuse the
+  // authored mapper so every format default stays identical, without mutating
+  // the source or shifting its material indices.
+  const authored = array(source.document.materials);
+  const inputs = needsDefault ? [...authored, {}] : authored;
+  const materials = inputs.map((value, i) => {
     const m = record(value);
     const pbr =
       m.pbrMetallicRoughness === undefined
@@ -341,6 +346,8 @@ export async function canonicalize(
   };
   const positionsByMesh = new Map<number, readonly Float32Array[]>();
   const blendShapes: GpuModelBlendShape[] = [];
+  const defaultMaterialId = `material-${array(source.document.materials).length}`;
+  let needsDefaultMaterial = false;
   const decode = (index: number, joints = false) => accessor(source, index, joints ? "joints" : false, budget);
   const meshes = array(source.document.meshes).map(
     (value, meshIndex): GpuModelMesh => {
@@ -407,14 +414,15 @@ export async function canonicalize(
           indices.values[i + 2] = swap;
         }
         const indexAccessor = add(indices, "INDICES");
+        if (primitive.material === undefined) needsDefaultMaterial = true;
         return {
           id: `primitive-${meshIndex}-${primitiveIndex}`,
           topology: "triangles" as const,
           attributes,
           indicesAccessorId: indexAccessor.id,
-          ...(primitive.material === undefined
-            ? {}
-            : { materialId: `material-${integer(primitive.material)}` }),
+          materialId: primitive.material === undefined
+            ? defaultMaterialId
+            : `material-${integer(primitive.material)}`,
         };
       });
       positionsByMesh.set(meshIndex, positions);
@@ -593,7 +601,7 @@ export async function canonicalize(
         type: image.mime,
       }),
     });
-  const { materials, textures } = mapMaterials(source);
+  const { materials, textures } = mapMaterials(source, needsDefaultMaterial);
   for (const t of textures)
     (t as { contentHash: string }).contentHash = resources.find(
       (r) => r.id === t.imageResourceId,

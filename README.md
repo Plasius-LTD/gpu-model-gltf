@@ -189,6 +189,13 @@ specular color. Texture offsets, scale, rotation in radians, selected UV and nor
 scales retain authored semantics; no transform is silently baked or discarded.
 See the [exact defaults/channels and consumer limits](docs/tdrs/tdr-0004-material-resource-fidelity.md).
 
+Primitives without a material reference receive glTF's normative empty-material
+defaults, including white base color, metallic/roughness 1 and IOR 1.5. The
+resource importer appends one shared canonical material only when needed and
+binds omitted references to it. Authored material IDs and input bytes stay
+unchanged; this avoids selecting format-neutral renderer defaults. Canonical
+GLB/glTF export and reimport retain these semantics.
+
 `normalizedGlb` embeds admitted relative/data/embedded resources and retains exact
 encoded PNG/JPEG bytes, materials, transforms, samplers and authored image metadata.
 It exposes the bounded normalized GLB already checked by Khronos, as an immutable
