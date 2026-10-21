@@ -214,7 +214,10 @@ function preflight(document: GpuModelDocument, budget: ImportBudget) {
   }
   let bytes = 0,
     elements = 0,
-    deformationElements = 0;
+    deformationElements = document.nodes.reduce(
+      (n, v) => n + (v.morphWeights?.length ?? 0),
+      0,
+    );
   for (const r of document.resources) {
     budget.check();
     cap(r.byteLength, l.maxResourceBytes);
@@ -240,9 +243,21 @@ function preflight(document: GpuModelDocument, budget: ImportBudget) {
     for (const set of skin.weightSets)
       deformationElements += set.joints.length * set.influencesPerVertex * 2;
   }
+  const accessorById = new Map(document.accessors.map((a) => [a.id, a]));
   for (const shape of document.blendShapes)
-    for (const delta of shape.deltas)
-      deformationElements += Object.keys(delta).length;
+    for (const delta of shape.deltas) {
+      budget.check();
+      for (const id of [
+        delta.positionAccessorId,
+        delta.normalAccessorId,
+        delta.tangentAccessorId,
+      ])
+        if (id) {
+          const accessor = accessorById.get(id)!;
+          deformationElements += accessor.count * sizes[accessor.elementType];
+          cap(deformationElements, l.maxDeformationElements);
+        }
+    }
   for (const animation of document.animations)
     for (const sampler of animation.samplers)
       deformationElements +=

@@ -16,7 +16,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
   - (placeholder)
 
 - **Fixed**
-  - (placeholder)
+  - Count referenced morph accessor components and node morph bindings in canonical export deformation preflight before reading any resource payload.
 
 - **Security**
   - (placeholder)
