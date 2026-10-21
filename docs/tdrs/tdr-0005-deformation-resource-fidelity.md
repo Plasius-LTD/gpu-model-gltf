@@ -149,7 +149,7 @@ observations are recorded on the linked Project issue after final changes.
 ## Local observed qualification
 
 Node24.18.0/npm11.16.0 frozen install and the13-command local verification suite
-pass:285 tests (215 baseline plus70 additions),94.68% lines/86.38% branches,
+pass:289 tests (215 baseline plus74 additions),94.69% lines/86.41% branches,
 100% lines in the new deformation module; all6 changed source files appear in
 LCOV. Runtime and full dependency audits report zero vulnerabilities. Packed
 ESM/CJS consumers and strict NodeNext ES2022+DOM type consumers pass with a shared
@@ -164,3 +164,9 @@ portable fixture and structural comparison were corrected without package change
 These are single local observations, not a throughput SLA, RSS measurement or
 physical animation rendering qualification. Firefox/Safari targets compile only;
 no runtime/device or GPU appearance certification is asserted.
+
+The PR review identified a structural preflight gap for paired skin influence sets.
+Four regression cases first failed after external acquisition on the original head:
+missing WEIGHTS, gapped sets, more than8 sets and extra WEIGHTS. Preflight now checks
+both semantic lists are exactly paired and contiguous0..N-1 with N<=8 before I/O.
+All four pass, with the full13-command suite and positive8-influence fixture green.

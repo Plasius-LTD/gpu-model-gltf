@@ -11,6 +11,15 @@ const rejectBeforeIo = async (mutate: (f: RigFixture) => void, reason = "invalid
 };
 const editSampler = (f: RigFixture) => f.json.animations[0].samplers[0];
 describe("deformation grammar and preflight refusal", () => {
+  it.each(["missing weights", "gapped sets", "excess sets", "extra weights"])("rejects %s in skin influences before resource acquisition", async kind => {
+    await rejectBeforeIo(f => {
+      const attrs = f.json.meshes[0].primitives[0].attributes;
+      if (kind === "missing weights") delete attrs.WEIGHTS_0;
+      if (kind === "gapped sets") { attrs.JOINTS_2 = attrs.JOINTS_0; attrs.WEIGHTS_2 = attrs.WEIGHTS_0; }
+      if (kind === "extra weights") attrs.WEIGHTS_1 = attrs.WEIGHTS_0;
+      if (kind === "excess sets") for (let i = 1; i < 9; i += 1) { attrs[`JOINTS_${i}`] = attrs.JOINTS_0; attrs[`WEIGHTS_${i}`] = attrs.WEIGHTS_0; }
+    });
+  });
   it.each([
     ["duplicate joints", (f: RigFixture) => { f.json.skins[0].joints = [1, 1]; }],
     ["empty joints", (f: RigFixture) => { f.json.skins[0].joints = []; }],

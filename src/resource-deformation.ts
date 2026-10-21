@@ -110,7 +110,11 @@ export function preflightDeformation(document: JsonRecord, budget: ImportBudget)
     for (const mesh of meshesBySkin[i]!) for (const p of array(meshes[mesh]!.primitives).map(record)) {
       const attrs = record(p.attributes);
       const sets = Object.keys(attrs).filter(s => /^JOINTS_/u.test(s));
-      if (!sets.length) fail("invalid-gltf-document", "Skinned primitives require joint and weight attributes.");
+      const weightSets = Object.keys(attrs).filter(s => /^WEIGHTS_/u.test(s));
+      if (!sets.length || sets.length > 8 || weightSets.length !== sets.length ||
+        Array.from({ length: sets.length }, (_, set) => set).some(set =>
+          !Object.hasOwn(attrs, `JOINTS_${set}`) || !Object.hasOwn(attrs, `WEIGHTS_${set}`)))
+        fail("invalid-gltf-document", "Skin influence sets must be paired, contiguous from zero and limited to eight.");
       const a = record(accessors[integer(attrs.POSITION, 0, accessors.length - 1)]);
       consume(integer(a.count, 1) * sets.length * 8);
     }
