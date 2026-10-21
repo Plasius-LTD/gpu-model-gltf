@@ -8,6 +8,7 @@ declare module "gltf-validator" {
 
   export interface ValidationReport {
     readonly issues?: {
+      readonly truncated?: unknown;
       readonly numErrors?: unknown;
       readonly numWarnings?: unknown;
       readonly numInfos?: unknown;

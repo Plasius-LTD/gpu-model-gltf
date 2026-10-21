@@ -205,6 +205,7 @@ interface KhronosIssueMessage {
 
 interface KhronosReport {
   readonly issues?: {
+    readonly truncated?: unknown;
     readonly numErrors?: unknown;
     readonly numWarnings?: unknown;
     readonly numInfos?: unknown;
@@ -1095,8 +1096,109 @@ function normalizeIssueCode(value: unknown): string {
   return `gltf-${normalized || "unknown"}`.slice(0, 128);
 }
 
+const SAFE_DIAGNOSTIC_POINTER_FIELDS = new Set([
+  "asset",
+  "version",
+  "minVersion",
+  "buffers",
+  "bufferViews",
+  "accessors",
+  "meshes",
+  "primitives",
+  "attributes",
+  "POSITION",
+  "NORMAL",
+  "TANGENT",
+  "TEXCOORD_0",
+  "TEXCOORD_1",
+  "COLOR_0",
+  "JOINTS_0",
+  "WEIGHTS_0",
+  "indices",
+  "material",
+  "materials",
+  "textures",
+  "images",
+  "samplers",
+  "nodes",
+  "scenes",
+  "scene",
+  "skins",
+  "animations",
+  "channels",
+  "target",
+  "targets",
+  "path",
+  "input",
+  "output",
+  "interpolation",
+  "translation",
+  "rotation",
+  "scale",
+  "matrix",
+  "weights",
+  "joints",
+  "skeleton",
+  "inverseBindMatrices",
+  "children",
+  "mesh",
+  "skin",
+  "buffer",
+  "bufferView",
+  "byteOffset",
+  "byteLength",
+  "byteStride",
+  "componentType",
+  "count",
+  "type",
+  "normalized",
+  "min",
+  "max",
+  "pbrMetallicRoughness",
+  "baseColorFactor",
+  "metallicFactor",
+  "roughnessFactor",
+  "baseColorTexture",
+  "metallicRoughnessTexture",
+  "normalTexture",
+  "occlusionTexture",
+  "emissiveTexture",
+  "emissiveFactor",
+  "index",
+  "texCoord",
+  "source",
+  "sampler",
+  "mimeType",
+  "uri",
+  "magFilter",
+  "minFilter",
+  "wrapS",
+  "wrapT",
+  "alphaMode",
+  "alphaCutoff",
+  "doubleSided",
+]);
+
 function normalizePointer(value: unknown): string {
-  if (typeof value !== "string" || !/^\/(?:[A-Za-z0-9_.~-]+\/?)*$/u.test(value) || value.length > 256) return "the document";
+  if (
+    typeof value !== "string" ||
+    !/^\/(?:[A-Za-z0-9_.~-]+\/?)*$/u.test(value) ||
+    value.length > 256
+  )
+    return "the document";
+  // Unknown property names are authored content, even when they look like safe path segments.
+  if (
+    value
+      .slice(1)
+      .split("/")
+      .some(
+        (part) =>
+          part !== "" &&
+          !/^(?:0|[1-9][0-9]*)$/u.test(part) &&
+          !SAFE_DIAGNOSTIC_POINTER_FIELDS.has(part),
+      )
+  )
+    return "the document";
   return value;
 }
 
@@ -1104,7 +1206,10 @@ async function validateWithKhronos(
   bytes: Uint8Array,
   limits: GlbResourceLimits,
   signal?: AbortSignal,
-): Promise<{ evidence: GlbValidatorEvidence; diagnostics: readonly ModelConverterDiagnostic[] }> {
+): Promise<{
+  evidence: GlbValidatorEvidence;
+  diagnostics: readonly ModelConverterDiagnostic[];
+}> {
   assertNotAborted(signal);
   const validator = await loadValidator();
   assertNotAborted(signal);
@@ -1113,45 +1218,137 @@ async function validateWithKhronos(
     report = await validator.validateBytes(bytes, {
       uri: "asset.glb",
       format: "glb",
-      maxIssues: limits.maxDiagnostics,
+      // Complete validation has a hard work ceiling independent of the caller's public reporting bound.
+      maxIssues: DEFAULT_GLB_LIMITS.maxDiagnostics,
       writeTimestamp: false,
       externalResourceFunction: async () => {
         throw new Error("External resource resolution is disabled.");
       },
     });
   } catch {
-    fail("gltf-spec-validation-failed", "The final GLB failed Khronos glTF validation.");
+    fail(
+      "gltf-spec-validation-failed",
+      "The final GLB failed Khronos glTF validation.",
+    );
   }
   assertNotAborted(signal);
+  return validateKhronosReport(report, limits, validator.version());
+}
+
+/** @internal One safe admission/reporting policy for normalized GLB and exact external package validation. */
+function validateKhronosReport(
+  report: KhronosReport,
+  limits: GlbResourceLimits,
+  version: string,
+): {
+  evidence: GlbValidatorEvidence;
+  diagnostics: readonly ModelConverterDiagnostic[];
+} {
   const issues = isRecord(report.issues) ? report.issues : {};
+  if (issues.truncated === true)
+    throw new GlbAdapterError(
+      "gltf-spec-validation-failed",
+      "Khronos validation exceeded its issue ceiling; complete conformance was not established.",
+      [
+        diagnostic(
+          "blocking",
+          "gltf-validation-incomplete",
+          "Khronos validation stopped at its bounded issue ceiling.",
+        ),
+      ],
+    );
+  if (
+    issues.truncated !== false ||
+    !Array.isArray(issues.messages) ||
+    [
+      issues.numErrors,
+      issues.numWarnings,
+      issues.numInfos,
+      issues.numHints,
+    ].some((n) => !Number.isSafeInteger(n) || (n as number) < 0)
+  )
+    fail(
+      "gltf-spec-validation-failed",
+      "Complete Khronos validation evidence is unavailable.",
+    );
   const errorCount = numberOrZero(issues.numErrors);
   const warningCount = numberOrZero(issues.numWarnings);
-  const infoCount = numberOrZero(issues.numInfos) + numberOrZero(issues.numHints);
+  const infoCount =
+    numberOrZero(issues.numInfos) + numberOrZero(issues.numHints);
   const issueCount = errorCount + warningCount + infoCount;
-  const rawMessages = Array.isArray(issues.messages) ? issues.messages.slice(0, limits.maxDiagnostics) : [];
-  let validatorBlockingOverride = false;
+  if (
+    issues.messages.length > DEFAULT_GLB_LIMITS.maxDiagnostics ||
+    issueCount !== issues.messages.length
+  )
+    fail(
+      "gltf-spec-validation-failed",
+      "Khronos validation issue evidence is inconsistent.",
+    );
+  const rank = (raw: unknown): number => {
+    if (!isRecord(raw)) return 2;
+    if (raw.severity === 0 || normalizeIssueCode(raw.code) === "gltf-image-unrecognized-format") return 0;
+    return raw.severity === 1 ? 1 : 2;
+  };
+  const rawMessages = [...issues.messages]
+    .sort((left, right) => rank(left) - rank(right))
+    .slice(0, limits.maxDiagnostics);
+  let validatorBlockingOverride = issues.messages.some(
+    (raw) =>
+      isRecord(raw) &&
+      normalizeIssueCode(raw.code) === "gltf-image-unrecognized-format",
+  );
   const diagnostics = rawMessages.map((raw): ModelConverterDiagnostic => {
-    const issue = isRecord(raw) ? raw as KhronosIssueMessage : {};
-    const severityNumber = typeof issue.severity === "number" ? issue.severity : 2;
+    const issue = isRecord(raw) ? (raw as KhronosIssueMessage) : {};
+    const severityNumber =
+      typeof issue.severity === "number" ? issue.severity : 2;
     const code = normalizeIssueCode(issue.code);
     const mustBlock = code === "gltf-image-unrecognized-format";
     validatorBlockingOverride ||= mustBlock;
-    const severity: ModelConverterDiagnostic["severity"] = severityNumber === 0 || mustBlock
-      ? "blocking"
-      : severityNumber === 1 ? "warning" : "info";
-    return diagnostic(severity, code, `Khronos glTF validation ${severity} at ${normalizePointer(issue.pointer)}.`);
+    const severity: ModelConverterDiagnostic["severity"] =
+      severityNumber === 0 || mustBlock
+        ? "blocking"
+        : severityNumber === 1
+          ? "warning"
+          : "info";
+    return diagnostic(
+      severity,
+      code,
+      `Khronos glTF validation ${severity} at ${normalizePointer(issue.pointer)}.`,
+    );
   });
-  if (issueCount > rawMessages.length && diagnostics.length < limits.maxDiagnostics) {
-    diagnostics.push(diagnostic(errorCount > 0 ? "blocking" : "warning", "gltf-validator-issues-truncated", "Additional Khronos glTF validation issues were omitted by the configured bound."));
+  if (issueCount > diagnostics.length) {
+    const omitted = diagnostic(
+      errorCount > 0 || validatorBlockingOverride ? "blocking" : "warning",
+      "gltf-validator-issues-truncated",
+      "Complete Khronos validation produced additional findings omitted by the reporting bound.",
+    );
+    if (diagnostics.length === limits.maxDiagnostics)
+      diagnostics[diagnostics.length - 1] = omitted;
+    else diagnostics.push(omitted);
   }
   if (errorCount > 0 || validatorBlockingOverride) {
-    const publicDiagnostics = diagnostics.length > 0
-      ? diagnostics
-      : [diagnostic("blocking", "gltf-validation-error", "Khronos glTF validation reported a blocking error.")];
-    throw new GlbAdapterError("gltf-spec-validation-failed", "The final GLB failed Khronos glTF validation.", publicDiagnostics);
+    const publicDiagnostics =
+      diagnostics.length > 0
+        ? diagnostics
+        : [
+            diagnostic(
+              "blocking",
+              "gltf-validation-error",
+              "Khronos glTF validation reported a blocking error.",
+            ),
+          ];
+    throw new GlbAdapterError(
+      "gltf-spec-validation-failed",
+      "The final GLB failed Khronos glTF validation.",
+      publicDiagnostics,
+    );
   }
   return {
-    evidence: Object.freeze({ id: "KhronosGroup/glTF-Validator", version: validator.version(), issueCount }),
+    evidence: Object.freeze({
+      id: "KhronosGroup/glTF-Validator",
+      version,
+      issueCount,
+    }),
     diagnostics: Object.freeze(diagnostics),
   };
 }
@@ -1360,5 +1557,5 @@ export const glbAdapter: ModelAdapter<GpuModelDocument, GpuModelStaticDemoCompil
 export const gltfFormatInternals = Object.freeze({
   assertNoDuplicateJsonKeys, validateJsonGraph, resolveLimits, parseGlb,
   validateClosedFeatureSet, validateBuffers, validateAccessors,
-  exportGlb, validateWithKhronos, sha256, imageKind, validatePng, validateImageDimensions,
+  exportGlb, validateWithKhronos, validateKhronosReport, sha256, imageKind, validatePng, validateImageDimensions,
 });

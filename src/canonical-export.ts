@@ -3,10 +3,12 @@ import {
   type GpuModelDocument,
 } from "@plasius/gpu-model-core";
 import {
+  DEFAULT_GLB_LIMITS,
   GlbAdapterError,
   gltfFormatInternals as format,
   type GlbValidatorEvidence,
 } from "./glb-adapter.js";
+import type { ModelConverterDiagnostic } from "@plasius/asset-contracts";
 import {
   ImportBudget,
   limitsFor,
@@ -48,6 +50,8 @@ export interface GltfExportPackage {
   readonly entryPoint: "model.glb" | "model.gltf";
   readonly resources: readonly GltfExportResource[];
   readonly validator: GlbValidatorEvidence;
+  /** Bounded sanitized findings from validation of these exact package bytes. */
+  readonly diagnostics: readonly ModelConverterDiagnostic[];
 }
 function stable(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(stable);
@@ -473,7 +477,7 @@ export async function exportGpuModelToGltf(
       validator.validateBytes(entry, {
         uri: entryPoint,
         format: layout,
-        maxIssues: limits.maxDiagnostics,
+        maxIssues: DEFAULT_GLB_LIMITS.maxDiagnostics,
         writeTimestamp: false,
         externalResourceFunction: async (uri: string) => {
           budget.check();
@@ -484,25 +488,11 @@ export async function exportGpuModelToGltf(
         },
       }),
     );
-    const issues = report.issues;
-    const count = (
-      key: "numErrors" | "numWarnings" | "numInfos" | "numHints",
-    ) =>
-      typeof issues?.[key] === "number" &&
-      Number.isSafeInteger(issues[key]) &&
-      (issues[key] as number) >= 0
-        ? (issues[key] as number)
-        : 0;
-    if (!issues || typeof issues.numErrors !== "number")
-      fail(
-        "gltf-spec-validation-failed",
-        "Khronos validation evidence is unavailable.",
-      );
-    if (count("numErrors") > 0)
-      fail(
-        "gltf-spec-validation-failed",
-        "The generated canonical package failed Khronos validation.",
-      );
+    const validation = format.validateKhronosReport(
+      report,
+      limits,
+      validator.version(),
+    );
     const resources: GltfExportResource[] = [];
     for (const f of outputFiles)
       resources.push(
@@ -522,15 +512,8 @@ export async function exportGpuModelToGltf(
       format: layout,
       entryPoint,
       resources: Object.freeze(resources),
-      validator: Object.freeze({
-        id: "KhronosGroup/glTF-Validator",
-        version: validator.version(),
-        issueCount:
-          count("numErrors") +
-          count("numWarnings") +
-          count("numInfos") +
-          count("numHints"),
-      }),
+      validator: validation.evidence,
+      diagnostics: validation.diagnostics,
     });
   } catch (error) {
     budget.check();

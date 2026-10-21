@@ -2,6 +2,9 @@ import { array, record, integer, fail, type JsonRecord } from "./resource-values
 export { array, record, integer, fail, type JsonRecord } from "./resource-values.js";
 import { admitMaterialExtensions } from "./resource-materials.js";
 import { preflightDeformation } from "./resource-deformation.js";
+import { repairSkinWeights, importDiagnostics } from "./resource-repair.js";
+import type { GpuModelDiagnosticMode, GpuModelDiagnosticReport } from "@plasius/gpu-model-core";
+import type { ModelConverterDiagnostic } from "@plasius/asset-contracts";
 import type { ResourceResolver } from "@plasius/gpu-model-runtime";
 import {
   DEFAULT_GLB_LIMITS,
@@ -30,6 +33,7 @@ export const DEFAULT_GLTF_RESOURCE_IMPORT_LIMITS = Object.freeze({
   maxAnimationSamplers: 4096,
   maxAnimationChannels: 8192,
   maxDeformationElements: 1_000_000,
+  maxDiagnostics: 100,
   timeoutMs: 30_000,
 });
 /** Acquisition, image, geometry and work ceilings for one import. */
@@ -146,6 +150,7 @@ export function formatLimits(
     maxImageDimension: limits.maxImageDimension,
     maxDecodedImageBytes: limits.maxDecodedImageBytes,
     maxAggregateDecodedImageBytes: limits.maxAggregateDecodedImageBytes,
+    maxDiagnostics: limits.maxDiagnostics,
   };
 }
 function relativePath(value: string): string {
@@ -368,6 +373,8 @@ export interface ResolvedImport {
   readonly sourceContentHash: string;
   readonly normalizedBytes: Uint8Array;
   readonly validator: Awaited<ReturnType<typeof format.validateWithKhronos>>;
+  readonly diagnosticReport: GpuModelDiagnosticReport;
+  readonly diagnostics: readonly ModelConverterDiagnostic[];
 }
 /** Bound repeated accessor/mesh references before acquisition or Khronos traversal. */
 function preflightGeometryWork(
@@ -447,6 +454,7 @@ export async function resolveImport(
   budget: ImportBudget,
   contentType?: string,
   deformation = false,
+  mode: GpuModelDiagnosticMode = "strict",
 ): Promise<ResolvedImport> {
   budget.check();
   const limits = formatLimits(budget.limits);
@@ -742,6 +750,8 @@ export async function resolveImport(
     limits,
   );
   format.validateAccessors(normalized, binary, bufferInfo.views, limits);
+  const sourceContentHash = await budget.wait(format.sha256(input));
+  const diagnosticReport = await repairSkinWeights(normalized, binary, budget, mode, sourceContentHash);
   const normalizedBytes = format.exportGlb(
     normalized,
     total ? binary : undefined,
@@ -759,7 +769,6 @@ export async function resolveImport(
   const validator = await budget.wait(
     format.validateWithKhronos(normalizedBytes, limits, budget.signal),
   );
-  const sourceContentHash = await budget.wait(format.sha256(input));
   return {
     sourceFormat,
     document: normalized,
@@ -768,5 +777,7 @@ export async function resolveImport(
     sourceContentHash,
     normalizedBytes,
     validator,
+    diagnosticReport,
+    diagnostics: importDiagnostics(diagnosticReport, validator.diagnostics, budget.limits.maxDiagnostics),
   };
 }
