@@ -10,7 +10,7 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ## [Unreleased]
 
 - **Added**
-  - (placeholder)
+  - Gated canonical edit export to deterministic GLB or relative glTF resource packages, preserving supported geometry, materials, textures, skins, morphs and animations with exact per-file hashes and pinned Khronos validation.
 
 - **Changed**
   - (placeholder)

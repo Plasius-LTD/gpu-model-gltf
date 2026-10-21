@@ -9,3 +9,5 @@ The first implementation decision is
 
 The bounded canonical demonstration hand-off is recorded in
 [ADR-0006: Bounded GLB to canonical demo import](./adr-0006-bounded-glb-to-canonical-demo-import.md).
+
+- [ADR-0011: Deterministic Canonical Edit Export](./adr-0011-canonical-edit-export.md)

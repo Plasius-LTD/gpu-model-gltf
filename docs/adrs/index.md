@@ -10,3 +10,5 @@
 - [ADR-0008: Bounded JSON/GLB Resource Import](./adr-0008-bounded-json-glb-resource-import.md)
 - [ADR-0009: Material Resource Preservation](./adr-0009-material-resource-preservation.md)
 - [ADR-0010: Opt-in Deformation Preservation](./adr-0010-opt-in-deformation-preservation.md)
+
+- [ADR-0011: Deterministic Canonical Edit Export](./adr-0011-canonical-edit-export.md)

@@ -170,3 +170,6 @@ export function admitMaterialExtensions(document: JsonRecord, budget: ImportBudg
     for (const [key, child] of Object.entries(obj)) if (key !== "extras") stack.push(child);
   }
 }
+
+/** @internal Shared closed grammar for forward and inverse format mapping. */
+export const materialExtensionRules = RULES;

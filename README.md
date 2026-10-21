@@ -7,6 +7,47 @@ the dedicated format boundary defined by site ADR 0094; runtime discovery stays
 in `@plasius/gpu-model-runtime`, while `@plasius/gpu-model-core` owns and
 privately verifies the canonical scene document returned by the demo importer.
 
+## Canonical edit export
+
+`exportGpuModelToGltf(document, options)` serializes a privately verified
+`@plasius/gpu-model-core` document, including current edits, as deterministic GLB
+or a relative glTF package. Existing source-normalized and low-level APIs retain
+their profiles.
+
+```ts
+import { exportGpuModelToGltf } from "@plasius/gpu-model-gltf";
+
+const output = await exportGpuModelToGltf(verifiedDocument, {
+  conversionEnabled: remotelyEvaluatedConversionDecision,
+  format: "gltf", // default "glb"
+  signal,
+});
+// model.gltf + model.bin + images/image-N.png|jpg, or one model.glb.
+// Persist every member at its generated relative path.
+for (const file of output.resources) {
+  await saveFile(file.path, file.payload);
+  // file.contentHash and file.byteLength identify the exact immutable Blob.
+}
+// output.entryPoint and output.validator identify the validated package.
+```
+
+This explicit profile preserves admitted triangle geometry/winding, materials and
+texture transforms, image bytes/samplers, authored TRS, skins, morph defaults and
+node bindings, and STEP/LINEAR/CUBICSPLINE animation. It never replays old source
+bytes. Generated references are validated with the pinned Khronos validator and
+resolve solely from the output map. Metadata/provenance, source paths, IDs and
+unused accessor storage are outside this interchange contract. Unsupported or
+ambiguous canonical constructs fail explicitly; GLB rejects `forbid-embedding`.
+See [the exact fidelity, exclusions and NFR contract](docs/tdrs/tdr-0006-canonical-edit-export.md).
+
+`limits` tightens the existing import-family ceilings, including 16MiB entry,
+64MiB aggregate output/resources, 4M repacked components and a 30s deadline.
+Cancellation races asynchronous operations; bounded synchronous work cannot be
+preempted mid-call. Run conversion in a worker for hard scheduling isolation.
+The exporter requires the caller's remote `gpu.model.conversion.enabled` decision;
+disabling adoption preserves existing loaders. No discovery or site rollout is
+performed by this API.
+
 ## Bounded JSON/GLB resource import
 
 `importGltfToGpuModelDocument(bytes, options)` defaults to `gltf-static-resources-v1`.
@@ -38,7 +79,7 @@ const result = await importGltfToGpuModelDocument(gltfBytes, {
 // result.document contains privately verified immutable canonical resources.
 // result.normalizedGlb.payload is a self-contained, source-normalized GLB Blob.
 // Its contentHash/byteLength identify exact output bytes; it does not serialize
-// edits to result.document. Full canonical editing/export belongs to Task #16.
+// edits to result.document. Use exportGpuModelToGltf for canonical edits.
 ```
 
 For URL acquisition, supply the runtime resolver's trusted `baseUrl` and normal
@@ -92,7 +133,7 @@ encoded PNG/JPEG bytes, materials, transforms, samplers and authored image metad
 It exposes the bounded normalized GLB already checked by Khronos, as an immutable
 Blob with a separate output hash. Repeated reimport does not accumulate image views.
 It exports the **source**, not a possibly edited canonical model; canonical GLB/glTF
-package layouts remain Task #16. Output can exceed the 16 MiB entry-point ceiling
+package layouts use exportGpuModelToGltf below. Output can exceed the 16 MiB entry-point ceiling
 when external resources are embedded; reimport then fails that existing limit.
 No budget is raised to make a round trip succeed.
 

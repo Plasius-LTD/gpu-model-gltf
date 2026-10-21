@@ -49,3 +49,6 @@ export { GLTF_RESOURCE_IMPORT_PROFILE, GLTF_DEFORMATION_IMPORT_PROFILE, GLTF_RES
 export type { NormalizedGltfSourceArtifact, ImportedGltfGpuModelDocument, ImportGltfToGpuModelDocumentOptions, GltfResourceImportProfile } from "./resource-import.js";
 export { DEFAULT_GLTF_RESOURCE_IMPORT_LIMITS } from "./resource-resolution.js";
 export type { GltfResourceImportLimits } from "./resource-resolution.js";
+
+export { GLTF_CANONICAL_EXPORT_FEATURE_FLAG, GLTF_CANONICAL_EXPORT_PROFILE, exportGpuModelToGltf } from "./canonical-export.js";
+export type { ExportGpuModelToGltfOptions, GltfExportResource, GltfExportPackage } from "./canonical-export.js";
