@@ -392,3 +392,13 @@ through npm OIDC with a pinned npm 11.6.2 client. The completed `0.1.0`
 bootstrap credential path has been removed; all subsequent releases require
 trusted publishing.
 <!-- END PLASIUS RELEASE INTEGRITY -->
+
+### Interrupted release recovery
+
+Use the ordinary `cd.yml` prepare phase with the required patch/minor/major bump.
+Preparation resumes an existing version only when neither npm nor GitHub has
+published it. If npm publication finished before a cancelled workflow could
+publish its GitHub draft, the requested bump selects a fresh immutable version.
+The pipeline owns version/changelog promotion and new tags; do not move existing
+tags, overwrite npm versions or publish locally. `bump=none` retains its explicit
+resume behavior and exact-main/tag identity checks.

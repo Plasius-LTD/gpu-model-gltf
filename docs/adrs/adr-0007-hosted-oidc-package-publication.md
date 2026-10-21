@@ -21,6 +21,17 @@ fallbacks. Reviewed CI uses explicit GitHub-hosted runners.
 The one-time `0.1.0` bootstrap path was removed after the package was published;
 all subsequent releases must use trusted publishing.
 
+## Interrupted publication recovery
+
+A requested patch/minor/major bump reuses a prepared version only while both
+npm and GitHub publication are incomplete. Once either immutable publication is
+complete, select a fresh version using the existing local/registry/tag maximum
+and requested bump. A draft or missing GitHub release must not cause reuse of an
+already-published npm version. Explicit `bump=none` and all exact-main, tag and
+duplicate-publication guards remain unchanged. Tests execute the real selection
+branch across interrupted/complete/none states. Recovery goes through the same
+PR, CI and main/production OIDC flow; no manual tag/changelog rewrite.
+
 ## Consequences
 
 Missing trust configuration, moved `main`, absent CI, unsupported runtime, or
