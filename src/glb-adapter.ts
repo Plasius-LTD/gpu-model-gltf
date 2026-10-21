@@ -606,6 +606,7 @@ function validateClosedFeatureSet(
   limits: GlbResourceLimits,
   signal?: AbortSignal,
   extensionAdmission?: (document: Record<string, unknown>) => void,
+  deformationAdmission?: (document: Record<string, unknown>) => void,
 ): void {
   const asset = asRecord(document.asset, "asset");
   if (asset.version !== "2.0") fail("invalid-gltf-document", "glTF asset.version must be exactly 2.0.");
@@ -615,7 +616,7 @@ function validateClosedFeatureSet(
   else if (used.length > 0 || required.length > 0) {
     fail("unsupported-gltf-feature", "This release admits only extension-free core glTF 2.0 assets.");
   }
-  if (asArray(document.animations, "animations").length > 0 || asArray(document.skins, "skins").length > 0) {
+  if (!deformationAdmission && (asArray(document.animations, "animations").length > 0 || asArray(document.skins, "skins").length > 0)) {
     fail("unsupported-gltf-feature", "Animation and skinning are outside the static-world GLB slice.");
   }
 
@@ -627,7 +628,7 @@ function validateClosedFeatureSet(
   let primitiveCount = 0;
   for (const [meshIndex, value] of meshes.entries()) {
     const mesh = asRecord(value, `meshes[${meshIndex}]`);
-    if (mesh.weights !== undefined) {
+    if (!deformationAdmission && mesh.weights !== undefined) {
       fail("unsupported-gltf-feature", "Mesh morph weights are not supported by this static release.");
     }
     const primitives = asArray(mesh.primitives, `meshes[${meshIndex}].primitives`);
@@ -638,7 +639,7 @@ function validateClosedFeatureSet(
       if (primitive.mode !== undefined && primitive.mode !== 4) {
         fail("unsupported-gltf-feature", "Only triangle-list primitives are supported.");
       }
-      if (primitive.targets !== undefined) fail("unsupported-gltf-feature", "Morph targets are not supported by this release.");
+      if (!deformationAdmission && primitive.targets !== undefined) fail("unsupported-gltf-feature", "Morph targets are not supported by this release.");
       const attributes = asRecord(primitive.attributes, `meshes[${meshIndex}].primitives[${primitiveIndex}].attributes`);
       if (attributes.POSITION === undefined) fail("missing-gltf-dependency", "Every admitted mesh primitive requires POSITION data.");
     }
@@ -646,7 +647,7 @@ function validateClosedFeatureSet(
   const nodes = assertCount(document, "nodes", limits.maxNodes);
   for (const [nodeIndex, value] of nodes.entries()) {
     const node = asRecord(value, `nodes[${nodeIndex}]`);
-    if (node.weights !== undefined || node.skin !== undefined) {
+    if (!deformationAdmission && (node.weights !== undefined || node.skin !== undefined)) {
       fail("unsupported-gltf-feature", "Node skinning and morph weights are not supported by this static release.");
     }
   }
@@ -657,6 +658,7 @@ function validateClosedFeatureSet(
   if (!extensionAdmission && hasExtensionPayload(document, signal)) {
     fail("unsupported-gltf-feature", "This release admits only extension-free core glTF 2.0 assets.");
   }
+  if (deformationAdmission) deformationAdmission(document);
 }
 
 function validateBuffers(

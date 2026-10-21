@@ -9,7 +9,7 @@ privately verifies the canonical scene document returned by the demo importer.
 
 ## Bounded JSON/GLB resource import
 
-`importGltfToGpuModelDocument(bytes, options)` selects `gltf-static-resources-v1`.
+`importGltfToGpuModelDocument(bytes, options)` defaults to `gltf-static-resources-v1`.
 It admits glTF 2.0 JSON and GLB, multiple external or base64 data-URI buffers,
 embedded or relative PNG/JPEG images, dense static triangle geometry, and core
 metallic-roughness/unlit materials, common KHR material extensions and texture transforms. External resources pass through
@@ -118,8 +118,8 @@ and [ADR-0008](docs/adrs/adr-0008-bounded-json-glb-resource-import.md).
 Material mapping and source-normalized output are recorded in
 [ADR-0009](docs/adrs/adr-0009-material-resource-preservation.md).
 
-The canonical producer and bridge must use the same released core0.5.0 instance
-and module format. Test consumers use bridge0.3.0 / renderer0.2.53. The renderer
+The canonical producer and bridge must use the same released core0.6.0 instance
+and module format. Test consumers use bridge0.4.0 / renderer0.2.53. The renderer
 accepts UV0/identity bindings and explicitly refuses other UV/transform forms;
 alpha mask is also refused, while advanced shading has existing renderer limits.
 Canonical factor/resource retention is not physical appearance certification.
@@ -157,6 +157,47 @@ The following inputs fail closed in the original strict validation profile:
 
 These exclusions are deliberate. They are not silently downgraded, resolved,
 or removed. `validateAndExportGlb` remains the lossless low-level boundary.
+
+## Opt-in skin, morph and animation preservation
+
+Select the additive profile explicitly; omission keeps the static boundary above:
+
+```ts
+import { GLTF_DEFORMATION_IMPORT_PROFILE, importGltfToGpuModelDocument }
+  from "@plasius/gpu-model-gltf";
+const result = await importGltfToGpuModelDocument(gltfBytes, {
+  conversionEnabled: remotelyEvaluatedConversionDecision,
+  profile: GLTF_DEFORMATION_IMPORT_PROFILE,
+  resourceResolver,
+  signal,
+});
+// result.profile is "gltf-deformation-resources-v1".
+// result.document has verified skins/joints, blendShapes, node-instance weights,
+// authored rest TRS and STEP/LINEAR/CUBICSPLINE translation/rotation/scale/weights.
+```
+
+This profile preserves ordered skin joints/inverse matrices (identity when omitted),
+paired vertex joint/weight sets, POSITION/NORMAL/TANGENT morph deltas, independent
+node-instance defaults and animation values/tangents. Reflection preserves quaternion
+signs and signed scales/weights. It never evaluates animation or normalizes skin
+weights. The normalization root moves the scene together; bounds describe **base
+geometry**, not deformed or animated motion envelopes. Source-normalized GLB round
+trips retain materials and animation deterministically; canonical edit export remains
+Task#16. Producer and bridge must share core0.6.0 and module format.
+
+Existing resource/work limits apply to all expanded data, with additional tightening-only
+limits:256 skins,4096 summed joints,1024 summed mesh targets,65,536 node morph bindings,
+256 animations,4096 samplers,8192 channels and1M expanded deformation elements.
+Repeated morph/animation references and duplicated skin rows are checked before I/O.
+Matrix-authored joint rest poses, extra inverse matrices, unbound skins, unused
+samplers, non-float animation data and morph UV/color/custom semantics fail explicitly.
+Inherited sparse/topology/camera/scene restrictions still apply. No rejected asset
+falls back to a static profile. Default strict/static APIs remain unchanged.
+
+Use the remotely evaluated `gpu.model.conversion.enabled` decision; disabling consumer
+adoption and retaining the prior compatible package set/loader is the rollback path.
+No capability or UI is added. See [ADR0010](docs/adrs/adr-0010-opt-in-deformation-preservation.md)
+and [the exact profile, limits, tests and NFRs](docs/tdrs/tdr-0005-deformation-resource-fidelity.md).
 
 ## ChatGPT PVOX demonstration profile
 

@@ -76,7 +76,7 @@
   "homepage": "https://github.com/Plasius-LTD/gpu-model-gltf#readme",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@plasius/gpu-model-renderer": "0.3.0",
+    "@plasius/gpu-model-renderer": "0.4.0",
     "@plasius/gpu-renderer": "0.2.53",
     "@types/node": "^26.4.0",
     "@typescript-eslint/eslint-plugin": "^8.69.0",
@@ -114,7 +114,7 @@
   },
   "dependencies": {
     "@plasius/asset-contracts": "^0.4.5",
-    "@plasius/gpu-model-core": "0.5.0",
+    "@plasius/gpu-model-core": "0.6.0",
     "@plasius/gpu-model-runtime": "^0.3.0",
     "gltf-validator": "2.0.0-dev.3.10",
     "jpeg-js": "0.4.4"

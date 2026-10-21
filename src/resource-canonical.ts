@@ -1,9 +1,11 @@
 import { materialExtensions, textureInfo, colorSpace } from "./resource-materials.js";
+import { mapDeformation, mapMorphTargets, nodeMorphBindings, nodeRestTrs, type DecodedAccessor } from "./resource-deformation.js";
 import {
   CANONICAL_GPU_MODEL_COORDINATE_SYSTEM,
   GPU_MODEL_DOCUMENT_SCHEMA_VERSION,
   createAndVerifyGpuModelDocument,
   type GpuModelAccessor,
+  type GpuModelBlendShape,
   type GpuModelDocument,
   type GpuModelMaterial,
   type GpuModelMesh,
@@ -31,6 +33,7 @@ const COMPONENTS: Record<string, number> = {
   VEC2: 2,
   VEC3: 3,
   VEC4: 4,
+  MAT4: 16,
 };
 const COMPONENT_BYTES: Record<number, number> = {
   5120: 1,
@@ -74,15 +77,10 @@ function read(
       );
   }
 }
-interface DecodedAccessor {
-  readonly count: number;
-  readonly size: number;
-  readonly values: Float32Array | Uint32Array;
-}
 function accessor(
   source: ResolvedImport,
   index: number,
-  indices: boolean,
+  indices: boolean | "joints",
   budget: ImportBudget,
 ): DecodedAccessor {
   const accessors = array(source.document.accessors);
@@ -96,7 +94,7 @@ function accessor(
   const count = integer(a.count, 1);
   const componentType = integer(a.componentType);
   if (
-    indices &&
+    indices === true &&
     (a.type !== "SCALAR" ||
       ![5121, 5123, 5125].includes(componentType) ||
       a.normalized === true)
@@ -265,6 +263,7 @@ export async function canonicalize(
   budget: ImportBudget,
   profile: string,
 ): Promise<GpuModelDocument> {
+  const deformation = profile === "gltf-deformation-resources-v1";
   const accessors: GpuModelAccessor[] = [];
   const packedParts: Uint8Array[] = [];
   let packedLength = 0;
@@ -283,7 +282,7 @@ export async function canonicalize(
         "Canonical geometry exceeds its decoded budget.",
       );
     const id = `accessor-${accessors.length}`;
-    if (["POSITION", "NORMAL", "TANGENT"].includes(semantic)) {
+    if (["POSITION", "NORMAL", "TANGENT", "MORPH_DELTA"].includes(semantic)) {
       for (let i = 0; i < decoded.count; i += 1) {
         if ((i & 1023) === 0) budget.check();
         decoded.values[i * decoded.size + 2] =
@@ -293,13 +292,23 @@ export async function canonicalize(
             -decoded.values[i * decoded.size + 3]!;
       }
     }
+    if (semantic === "ANIMATION_ROTATION") for (let i = 0; i < decoded.count; i += 1) {
+      if ((i & 1023) === 0) budget.check();
+      decoded.values[i * 4] = -decoded.values[i * 4]!;
+      decoded.values[i * 4 + 1] = -decoded.values[i * 4 + 1]!;
+    }
     // Serialize little endian explicitly, independent of the host's typed-array basis.
-    const bytes = new Uint8Array(decoded.values.byteLength);
+    const isJoint = /^JOINTS_/u.test(semantic);
+    const bytes = new Uint8Array(decoded.values.length * (isJoint ? 2 : 4));
     const view = new DataView(bytes.buffer);
     const isIndex = semantic === "INDICES";
     for (let i = 0; i < decoded.values.length; i += 1) {
       if ((i & 4095) === 0) budget.check();
-      if (isIndex) view.setUint32(i * 4, decoded.values[i]!, true);
+      if (isJoint) {
+        if (decoded.values[i]! > 65535) fail("invalid-gltf-document", "Joint indices exceed the unsigned short representation.");
+        view.setUint16(i * 2, decoded.values[i]!, true);
+      }
+      else if (isIndex) view.setUint32(i * 4, decoded.values[i]!, true);
       else view.setFloat32(i * 4, decoded.values[i]!, true);
     }
     const minima = new Array(decoded.size).fill(Infinity) as number[];
@@ -317,7 +326,7 @@ export async function canonicalize(
       resourceId: "geometry",
       byteOffset: packedLength,
       count: decoded.count,
-      componentType: isIndex ? "u32" : "f32",
+      componentType: isJoint ? "u16" : isIndex ? "u32" : "f32",
       elementType:
         decoded.size === 1
           ? "scalar"
@@ -331,6 +340,8 @@ export async function canonicalize(
     return a;
   };
   const positionsByMesh = new Map<number, readonly Float32Array[]>();
+  const blendShapes: GpuModelBlendShape[] = [];
+  const decode = (index: number, joints = false) => accessor(source, index, joints ? "joints" : false, budget);
   const meshes = array(source.document.meshes).map(
     (value, meshIndex): GpuModelMesh => {
       const mesh = record(value);
@@ -341,13 +352,13 @@ export async function canonicalize(
         const attrs = record(primitive.attributes);
         const attributes: { semantic: string; accessorId: string }[] = [];
         let positionCount = 0;
-        for (const [semantic, index] of Object.entries(attrs)) {
-          if (/^(?:JOINTS|WEIGHTS)_/u.test(semantic))
+        for (const [semantic, index] of (deformation ? Object.entries(attrs).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0) : Object.entries(attrs))) {
+          if (!deformation && /^(?:JOINTS|WEIGHTS)_/u.test(semantic))
             fail(
               "unsupported-gltf-feature",
               "Joint and weight attributes require the skinning profile.",
             );
-          const decoded = accessor(source, integer(index), false, budget);
+          const decoded = decode(integer(index), /^JOINTS_/u.test(semantic));
           if (
             ((semantic === "POSITION" || semantic === "NORMAL") &&
               decoded.size !== 3) ||
@@ -407,6 +418,7 @@ export async function canonicalize(
         };
       });
       positionsByMesh.set(meshIndex, positions);
+      if (deformation) blendShapes.push(...mapMorphTargets(mesh, meshIndex, decode, add));
       return {
         id: `mesh-${meshIndex}`,
         ...(mesh.name === undefined ? {} : { name: mesh.name as string }),
@@ -453,6 +465,9 @@ export async function canonicalize(
       ? {}
       : { meshId: `mesh-${integer(n.mesh, 0, meshes.length - 1)}` }),
     localMatrix: geometry.conjugateBasis(geometry.matrixFromNode(n, i)),
+    ...(deformation && n.matrix === undefined ? { restLocalTransform: nodeRestTrs(n) } : {}),
+    ...(deformation ? nodeMorphBindings(n, array(source.document.meshes)) : {}),
+    ...(deformation && n.skin !== undefined ? { skinId: `skin-${integer(n.skin)}` } : {}),
   }));
   const seen = new Set<number>();
   const worldPositions: {
@@ -493,6 +508,7 @@ export async function canonicalize(
       "unsupported-gltf-feature",
       "The selected scene must own every source node.",
     );
+  const rig = deformation ? mapDeformation(source, nodes, budget, decode, add) : { joints: [], skeletons: [], skins: [], animations: [] };
   const min = [Infinity, Infinity, Infinity];
   const max = [-Infinity, -Infinity, -Infinity];
   let vertices = 0;
@@ -626,11 +642,8 @@ export async function canonicalize(
           meshes,
           materials,
           textures,
-          skeletons: [],
-          joints: [],
-          skins: [],
-          blendShapes: [],
-          animations: [],
+          ...rig,
+          blendShapes,
           analyticGeometry: [],
           bounds: {
             min: [min[0]! - centerX, 0, min[2]! - centerZ] as GpuModelVec3,
@@ -644,14 +657,14 @@ export async function canonicalize(
             sourceFormat: source.sourceFormat,
             sourceContentHash: source.sourceContentHash,
             converterId: "gltf-resource-importer",
-            converterVersion: "2026-10-21.v2",
+            converterVersion: deformation ? "2026-10-21.v3" : "2026-10-21.v2",
           },
           diagnostics: [
             {
               severity: "info",
               code: "gltf-resource-canonicalized",
               message:
-                "Bounded static geometry and image resources were verified in the canonical basis.",
+                deformation ? "Bounded geometry, skin, morph and animation data were verified in the canonical basis; bounds describe base geometry." : "Bounded static geometry and image resources were verified in the canonical basis.",
             },
           ],
           metadata: { profile },
