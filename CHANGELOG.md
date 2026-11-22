@@ -9,6 +9,8 @@ The format is based on **[Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 
 ## [Unreleased]
 
+- Refresh security tooling and consume verified model-core, runtime and renderer releases with matching document validation identities.
+
 - **Added**
   - (placeholder)
 
